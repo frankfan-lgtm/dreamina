@@ -15,46 +15,7 @@ function sentimentColor(val) {
   return "#605868";
 }
 
-// ─── API Key 输入页 ───
-function ApiKeyScreen({ onSubmit }) {
-  const [key, setKey] = useState(() => localStorage.getItem("claude_api_key") || "");
-
-  const handleSubmit = () => {
-    if (!key.trim()) return;
-    localStorage.setItem("claude_api_key", key.trim());
-    onSubmit(key.trim());
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <div className="text-6xl mb-4">🌌</div>
-      <h1 className="text-3xl font-bold text-accent mb-2">创世模拟器</h1>
-      <p className="text-text-dim mb-8 text-center max-w-md">
-        用户扮演造物主，选择一个世界观，观察AI驱动的NPC自发涌现行为、社交、进化
-      </p>
-      <div className="w-full max-w-md">
-        <label className="block text-sm text-text-dim mb-2">输入你的 Claude API Key</label>
-        <input
-          type="password"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          placeholder="sk-ant-..."
-          className="w-full bg-card border border-border rounded-lg px-4 py-3 text-text focus:border-accent focus:outline-none"
-        />
-        <button
-          onClick={handleSubmit}
-          className="w-full mt-4 bg-accent/20 border border-accent text-accent rounded-lg py-3 hover:bg-accent/30 transition-colors cursor-pointer font-semibold"
-        >
-          进入创世
-        </button>
-        <p className="text-xs text-text-dim mt-3 text-center">
-          Key 仅存储在本地浏览器，通过 Vite 代理调用 Claude API
-        </p>
-      </div>
-    </div>
-  );
-}
+// API Key 不再需要，通过本地服务器调用 Claude CLI
 
 // ─── 世界选择页 ───
 function WorldSelectScreen({ onSelect }) {
@@ -500,20 +461,8 @@ function SimulationScreen({ template, apiKey, onBack }) {
 
 // ─── App Root ───
 export default function App() {
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("claude_api_key") || "");
-  const [phase, setPhase] = useState(apiKey ? "select" : "apikey");
+  const [phase, setPhase] = useState("select");
   const [template, setTemplate] = useState(null);
-
-  if (phase === "apikey") {
-    return (
-      <ApiKeyScreen
-        onSubmit={(key) => {
-          setApiKey(key);
-          setPhase("select");
-        }}
-      />
-    );
-  }
 
   if (phase === "select") {
     return (
@@ -530,7 +479,7 @@ export default function App() {
     <SimulationScreen
       key={template.id}
       template={template}
-      apiKey={apiKey}
+      apiKey=""
       onBack={() => {
         setTemplate(null);
         setPhase("select");

@@ -95,30 +95,20 @@ export function buildPrompt(template, npcs, tick, pendingIntervention) {
 }
 
 export async function callClaude(apiKey, systemPrompt, userPrompt) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch("/api/claude", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ systemPrompt, userPrompt }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`API错误 (${res.status}): ${err}`);
+    throw new Error(`服务器错误 (${res.status}): ${err}`);
   }
 
   const data = await res.json();
-  const text = data.content?.[0]?.text;
-  if (!text) throw new Error("API返回内容为空");
+  const text = data.text;
+  if (!text) throw new Error("返回内容为空");
   return text;
 }
 
