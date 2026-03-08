@@ -23,16 +23,18 @@ app.post("/api/claude", (req, res) => {
     CLAUDE_SYSTEM_PROMPT: systemPrompt,
     CLAUDE_USER_PROMPT: userPrompt,
   };
+  // 移除可能导致"嵌套会话"错误的环境变量
+  delete env.CLAUDECODE;
 
   exec(
-    'npx -y @anthropic-ai/claude-code --print --model claude-sonnet-4-20250514 --max-turns 1 --output-format text --append-system-prompt "$CLAUDE_SYSTEM_PROMPT" "$CLAUDE_USER_PROMPT"',
+    'npx -y @anthropic-ai/claude-code --print --model claude-sonnet-4-6 --max-turns 1 --output-format text --append-system-prompt "$CLAUDE_SYSTEM_PROMPT" "$CLAUDE_USER_PROMPT"',
     { timeout: 120000, maxBuffer: 1024 * 1024, env, shell: "/bin/bash" },
     (error, stdout, stderr) => {
       if (error) {
         console.error("Claude CLI 错误:", error.message);
         if (stderr) console.error("stderr:", stderr);
         return res.status(500).json({
-          error: `Claude CLI 调用失败: ${error.message}`,
+          error: `Claude CLI 调用失败: ${stderr || error.message}`,
         });
       }
       res.json({ text: stdout });
