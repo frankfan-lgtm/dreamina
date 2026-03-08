@@ -25,7 +25,7 @@ app.post("/api/claude", (req, res) => {
   };
 
   exec(
-    'npx -y @anthropic-ai/claude-code --print --model claude-sonnet-4-20250514 --max-turns 1 --output-format text -s "$CLAUDE_SYSTEM_PROMPT" "$CLAUDE_USER_PROMPT"',
+    'npx -y @anthropic-ai/claude-code --print --model claude-sonnet-4-20250514 --max-turns 1 --output-format text --append-system-prompt "$CLAUDE_SYSTEM_PROMPT" "$CLAUDE_USER_PROMPT"',
     { timeout: 120000, maxBuffer: 1024 * 1024, env, shell: "/bin/bash" },
     (error, stdout, stderr) => {
       if (error) {
