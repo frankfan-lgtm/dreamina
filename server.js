@@ -1,5 +1,5 @@
 import express from "express";
-import { execFile } from "child_process";
+import { exec } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -17,19 +17,16 @@ app.post("/api/claude", (req, res) => {
     return res.status(400).json({ error: "缺少 systemPrompt 或 userPrompt" });
   }
 
-  const fullPrompt = `${userPrompt}`;
+  // 用环境变量传递 prompt，避免命令行转义问题
+  const env = {
+    ...process.env,
+    CLAUDE_SYSTEM_PROMPT: systemPrompt,
+    CLAUDE_USER_PROMPT: userPrompt,
+  };
 
-  execFile(
-    "claude",
-    [
-      "--print",
-      "--model", "claude-sonnet-4-20250514",
-      "--max-turns", "1",
-      "--output-format", "text",
-      "-s", systemPrompt,
-      fullPrompt,
-    ],
-    { timeout: 60000, maxBuffer: 1024 * 1024 },
+  exec(
+    'npx -y @anthropic-ai/claude-code --print --model claude-sonnet-4-20250514 --max-turns 1 --output-format text -s "$CLAUDE_SYSTEM_PROMPT" "$CLAUDE_USER_PROMPT"',
+    { timeout: 120000, maxBuffer: 1024 * 1024, env, shell: "/bin/bash" },
     (error, stdout, stderr) => {
       if (error) {
         console.error("Claude CLI 错误:", error.message);
