@@ -1,5 +1,7 @@
 import express from "express";
-import { exec } from "child_process";
+import { execFile } from "child_process";
+import { writeFileSync, unlinkSync } from "fs";
+import { tmpdir } from "os";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -17,29 +19,36 @@ app.post("/api/claude", (req, res) => {
     return res.status(400).json({ error: "缺少 systemPrompt 或 userPrompt" });
   }
 
-  // 用环境变量传递 prompt，避免命令行转义问题
-  const env = {
-    ...process.env,
-    CLAUDE_SYSTEM_PROMPT: systemPrompt,
-    CLAUDE_USER_PROMPT: userPrompt,
-  };
-  // 移除可能导致"嵌套会话"错误的环境变量
+  // 将 prompt 写入临时文件，避免 shell 转义问题
+  const promptFile = join(tmpdir(), `claude-prompt-${Date.now()}.txt`);
+  const fullPrompt = `[System Instructions]\n${systemPrompt}\n\n[User Request]\n${userPrompt}`;
+  writeFileSync(promptFile, fullPrompt, "utf-8");
+
+  const env = { ...process.env };
   delete env.CLAUDECODE;
 
-  exec(
-    'npx -y @anthropic-ai/claude-code --print --model claude-sonnet-4-6 --max-turns 1 --output-format text --append-system-prompt "$CLAUDE_SYSTEM_PROMPT" "$CLAUDE_USER_PROMPT"',
-    { timeout: 120000, maxBuffer: 1024 * 1024, env, shell: "/bin/bash" },
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error("Claude CLI 错误:", error.message);
-        if (stderr) console.error("stderr:", stderr);
-        return res.status(500).json({
-          error: `Claude CLI 调用失败: ${stderr || error.message}`,
-        });
-      }
-      res.json({ text: stdout });
+  const args = [
+    "-y", "@anthropic-ai/claude-code",
+    "--print",
+    "--model", "claude-sonnet-4-6",
+    "--max-turns", "1",
+    "--output-format", "text",
+    fullPrompt,
+  ];
+
+  execFile("npx", args, { timeout: 120000, maxBuffer: 1024 * 1024, env }, (error, stdout, stderr) => {
+    // 清理临时文件
+    try { unlinkSync(promptFile); } catch {}
+
+    if (error) {
+      console.error("Claude CLI 错误:", error.message);
+      if (stderr) console.error("stderr:", stderr);
+      return res.status(500).json({
+        error: `Claude CLI 调用失败: ${stderr || error.message}`,
+      });
     }
-  );
+    res.json({ text: stdout });
+  });
 });
 
 app.listen(PORT, () => {
