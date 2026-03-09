@@ -282,11 +282,22 @@ function drawFloor(ctx, x, y, w, h, color) {
   }
 }
 
-// Draw 3D room border
+// Draw Pokemon-style room border with wall strip
 function drawBorder(ctx, x, y, w, h) {
-  ctx.fillStyle='#c8b888'; ctx.fillRect(x,y,w,3); ctx.fillRect(x,y,3,h);
-  ctx.fillStyle='#786830'; ctx.fillRect(x,y+h-3,w,3); ctx.fillRect(x+w-3,y,3,h);
-  ctx.fillStyle='#a89858'; ctx.fillRect(x,y,3,3); // corner highlight
+  // Top wall strip (Pokemon-style lighter wall area)
+  const wallH = Math.min(18, h * 0.12);
+  ctx.fillStyle='#8898a8'; ctx.fillRect(x+3, y+3, w-6, wallH);
+  ctx.fillStyle='#98a8b8'; ctx.fillRect(x+4, y+4, w-8, wallH-2);
+  // Baseboard
+  ctx.fillStyle='#7a6a50'; ctx.fillRect(x+3, y+3+wallH, w-6, 2);
+
+  // Border frame (thick golden wood)
+  ctx.fillStyle='#d8c888'; ctx.fillRect(x,y,w,4); ctx.fillRect(x,y,4,h);
+  ctx.fillStyle='#887838'; ctx.fillRect(x,y+h-4,w,4); ctx.fillRect(x+w-4,y,4,h);
+  // Inner edge
+  ctx.fillStyle='#b8a868'; ctx.fillRect(x+3,y+3,w-6,1); ctx.fillRect(x+3,y+3,1,h-6);
+  // Outer highlight
+  ctx.fillStyle='#e8d898'; ctx.fillRect(x,y,w,1); ctx.fillRect(x,y,1,h);
 }
 
 // ─── 房间家具绘制系统（俯视图像素画）───
@@ -966,7 +977,7 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
       if (canvas.width!==cw||canvas.height!==ch) { canvas.width=cw; canvas.height=ch; }
       const ctx = canvas.getContext('2d');
       ctx.imageSmoothingEnabled = false;
-      ctx.fillStyle='#0f1828'; ctx.fillRect(0,0,cw,ch);
+      ctx.fillStyle='#182038'; ctx.fillRect(0,0,cw,ch);
       const t = Date.now();
       const pad=8, gap=6, bw=3, labelH=20;
       const zoomed = zoomRef.current;
@@ -1164,7 +1175,7 @@ function DialogueStream({ dialogues, npcs }) {
 
   if (dialogues.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-text-dim text-sm">
+      <div className="flex-1 flex items-center justify-center text-sm" style={{color:'#6878a0', background:'#141c34'}}>
         <div className="text-center">
           <div className="text-3xl mb-2">...</div>
           <div>点击下方播放按钮，世界开始运转</div>
@@ -1188,7 +1199,7 @@ function DialogueStream({ dialogues, npcs }) {
           );
         }
         return (
-          <div key={i} className={`dialogue-row animate-fade-in ${i === 0 ? "dialogue-latest" : ""}`}>
+          <div key={i} className={"dialogue-row animate-fade-in " + (i === 0 ? "dialogue-latest" : "")}>
             <div className="dialogue-meta">
               <span className="dialogue-time">{d.day}d {d.hour}h</span>
             </div>
@@ -1336,11 +1347,7 @@ function NPCPanel({ npc, allNpcs, apiConfig, world, gameTime }) {
       <div className="flex gap-1 py-2 overflow-x-auto" style={{borderBottom:'2px solid #2a4a78'}}>
         {tabs.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-2 py-1 rounded-lg text-[10px] cursor-pointer transition-all whitespace-nowrap font-semibold ${
-              tab === t.id
-                ? ""
-                : ""
-            }`}
+            className="px-2 py-1 rounded-lg text-[10px] cursor-pointer transition-all whitespace-nowrap font-semibold"
             style={tab === t.id ? {
               background:'linear-gradient(180deg, #2898c8 0%, #2080a8 100%)',
               color:'#fff', border:'1px solid #1870a0',
@@ -1375,7 +1382,7 @@ function SoulTab({ npc }) {
   const { gene, personality } = npc;
   return (
     <div className="space-y-3">
-      <div className="text-xs text-text-dim">{npc.background}</div>
+      <div className="text-xs" style={{color:'#8898b8'}}>{npc.background}</div>
 
       <div>
         <div className="panel-section-title">核心驱力</div>
@@ -1409,7 +1416,7 @@ function SoulTab({ npc }) {
         <div>
           <div className="panel-section-title">🔀 突变历史</div>
           {gene.mutation_log.map((m, i) => (
-            <div key={i} className="text-[10px] bg-bg rounded px-2 py-1 border border-border mb-1">
+            <div key={i} className="text-[10px] poke-card" style={{padding:'5px 10px'}}>
               <span className="text-accent">D{m.tick}</span> {m.trait}: {m.from.toFixed(2)}→{m.to.toFixed(2)} — {m.reason}
             </div>
           ))}
@@ -1419,7 +1426,7 @@ function SoulTab({ npc }) {
       <div>
         <div className="panel-section-title">成长经历</div>
         {personality.origin.map((o, i) => (
-          <div key={i} className="text-[10px] bg-bg rounded px-2 py-1 border border-border mb-1">
+          <div key={i} className="text-[10px] poke-card" style={{padding:'5px 10px'}}>
             <span className="text-accent">{o.age}</span> {o.event}
             <div className="text-text-dim mt-0.5">→ {o.expression}</div>
           </div>
@@ -1456,21 +1463,21 @@ function GoalsTab({ npc }) {
   const sorted = Object.entries(npc.goals).sort((a, b) => b[1].priority - a[1].priority);
   return (
     <div className="space-y-2">
-      <div className="text-[10px] text-text-dim">目标优先级由基因核心驱力决定，满足度受环境影响</div>
+      <div className="text-[10px]" style={{color:'#6878a0'}}>目标优先级由基因核心驱力决定，满足度受环境影响</div>
       {sorted.map(([name, goal]) => (
-        <div key={name} className="bg-bg rounded px-2 py-2 border border-border">
+        <div key={name} className="poke-card">
           <div className="flex justify-between items-center">
             <span className="text-xs font-semibold">{goal.priority >= 4 ? "❗" : "  "} {name}</span>
-            <span className="text-[10px] text-accent">优先级 {goal.priority}/5</span>
+            <span className="text-[10px]" style={{color:'#48d0f0'}}>优先级 {goal.priority}/5</span>
           </div>
-          <div className="w-full h-2 bg-border rounded mt-1.5 overflow-hidden">
-            <div className="h-full rounded transition-all duration-500" style={{
+          <div className="poke-bar mt-1.5">
+            <div className="poke-bar-fill" style={{
               width: `${goal.satisfaction}%`,
-              backgroundColor: goal.satisfaction > 60 ? "#5a9868" : goal.satisfaction > 30 ? "#c08850" : "#a85050"
+              backgroundColor: goal.satisfaction > 60 ? "#58d878" : goal.satisfaction > 30 ? "#e8b848" : "#e86060"
             }} />
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-[10px] text-text-dim">{goal.desc}</span>
+            <span className="text-[10px]" style={{color:'#6878a0'}}>{goal.desc}</span>
             <span className="text-[10px]">{goal.satisfaction}%</span>
           </div>
         </div>
@@ -1489,7 +1496,7 @@ function MemoryTab({ npc }) {
         {(!memories.short || memories.short.length === 0)
           ? <div className="text-[10px] text-text-dim">暂无</div>
           : [...memories.short].reverse().map((m, i) => (
-            <div key={i} className="text-[10px] bg-bg rounded px-2 py-1 border border-border mb-1">{m}</div>
+            <div key={i} className="text-[10px] poke-card" style={{padding:'5px 10px'}}>{m}</div>
           ))}
       </div>
       <div>
@@ -1497,7 +1504,7 @@ function MemoryTab({ npc }) {
         {(!memories.medium || memories.medium.length === 0)
           ? <div className="text-[10px] text-text-dim">暂无</div>
           : [...memories.medium].reverse().map((m, i) => (
-            <div key={i} className="text-[10px] bg-bg rounded px-2 py-1 border border-border mb-1">{m}</div>
+            <div key={i} className="text-[10px] poke-card" style={{padding:'5px 10px'}}>{m}</div>
           ))}
       </div>
       <div>
@@ -1505,7 +1512,7 @@ function MemoryTab({ npc }) {
         {(!memories.long || memories.long.length === 0)
           ? <div className="text-[10px] text-text-dim">暂无</div>
           : memories.long.map((m, i) => (
-            <div key={i} className="text-[10px] bg-bg rounded px-2 py-1 border border-accent/30 mb-1 text-accent/80">{m}</div>
+            <div key={i} className="text-[10px] poke-card" style={{padding:'5px 10px', borderColor:'#2898c8', color:'#78d8f0'}}>{m}</div>
           ))}
       </div>
     </div>
@@ -1540,7 +1547,7 @@ function SkillsTab({ npc }) {
                 style={{ width: `${(level / 10) * 100}%`, backgroundColor: "#5a9868" }} />
               <div className="absolute h-full border-r-2 border-dashed border-accent/50"
                 style={{ width: `${(ceiling / 10) * 100}%` }}
-                title={`天赋天花板: ${ceiling}`} />
+                title={"天赋天花板: " + ceiling} />
             </div>
           </div>
         );
@@ -1561,32 +1568,32 @@ function StateTab({ npc }) {
   return (
     <div className="space-y-3">
       {gauges.map((g) => (
-        <div key={g.label} className={`bg-bg rounded px-3 py-2 border ${g.warn ? "border-negative" : "border-border"}`}>
+        <div key={g.label} className="poke-card" style={g.warn ? {borderColor:'#e86060'} : {}}>
           <div className="flex justify-between text-xs">
-            <span>{g.label}</span>
+            <span style={{color:'#c8d8e8'}}>{g.label}</span>
             <span style={{ color: g.color }}>{g.value}/100 {g.desc}</span>
           </div>
-          <div className="w-full h-3 bg-border rounded mt-1.5 overflow-hidden">
-            <div className="h-full rounded transition-all duration-500" style={{ width: `${g.value}%`, backgroundColor: g.color }} />
+          <div className="poke-bar mt-1.5">
+            <div className="poke-bar-fill" style={{ width: `${g.value}%`, backgroundColor: g.color }} />
           </div>
         </div>
       ))}
 
-      <div className="bg-bg rounded px-3 py-2 border border-border">
+      <div className="poke-card">
         <div className="flex justify-between text-xs">
           <span>薪资</span>
-          <span className="text-accent">¥{state.salary?.toLocaleString()}</span>
+          <span style={{color:'#48d0f0'}}>¥{state.salary?.toLocaleString()}</span>
         </div>
       </div>
 
-      <div className="bg-bg rounded px-3 py-2 border border-border">
+      <div className="poke-card">
         <div className="flex justify-between text-xs">
           <span>绩效</span>
-          <span className={`font-bold ${
-            state.performance === "S" ? "text-positive" :
-            state.performance === "A" ? "text-accent" :
-            state.performance === "C" ? "text-negative" : "text-text-dim"
-          }`}>{state.performance || "待定"}</span>
+          <span className="font-bold" style={{color:
+            state.performance === "S" ? "#58d878" :
+            state.performance === "A" ? "#48d0f0" :
+            state.performance === "C" ? "#e86060" : "#6878a0"
+          }}>{state.performance || "待定"}</span>
         </div>
       </div>
 
@@ -1604,56 +1611,49 @@ function StateTab({ npc }) {
 }
 
 // ── 关系 Tab ──
+function relBarStyle(val) {
+  if (val >= 0) return { marginLeft: "50%", width: (val / 2) + "%" };
+  return { marginLeft: ((val + 100) / 2) + "%", width: (50 - (val + 100) / 2) + "%" };
+}
+
 function RelationsTab({ npc, allNpcs }) {
   const rels = npc.relationships || {};
-  if (Object.keys(rels).length === 0) return <div className="text-xs text-text-dim">暂无关系数据</div>;
+  if (Object.keys(rels).length === 0) return <div className="text-xs" style={{color:'#6878a0'}}>暂无关系数据</div>;
 
   return (
     <div className="space-y-2">
-      <div className="text-[10px] text-text-dim">内心真实态度 vs 外在表现 — 差值越大越"城府深"</div>
+      <div className="text-[10px]" style={{color:'#6878a0'}}>内心真实态度 vs 外在表现 — 差值越大越"城府深"</div>
       {Object.entries(rels).map(([tid, rel]) => {
         const target = allNpcs.find((n) => n.id === tid);
         if (!target) return null;
         const gap = Math.abs(rel.inner - rel.outer);
         return (
-          <div key={tid} className="bg-bg rounded px-2 py-2 border border-border">
+          <div key={tid} className="poke-card">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs">{target.emoji} {target.name}</span>
-              {gap > 20 && <span className="text-[10px] text-negative">🎭 城府深</span>}
+              <span className="text-xs" style={{color:'#c8d8e8'}}>{target.emoji} {target.name}</span>
+              {gap > 20 && <span className="text-[10px]" style={{color:'#e86060'}}>🎭 城府深</span>}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-text-dim w-8">内心</span>
-                <div className="flex-1 h-2 bg-border rounded overflow-hidden relative">
-                  <div className="absolute inset-0 flex">
-                    <div className="w-1/2 border-r border-bg/30" />
-                  </div>
-                  <div className="h-full rounded transition-all"
-                    style={{
-                      width: `${(rel.inner + 100) / 2}%`,
-                      backgroundColor: relColor(rel.inner),
-                      marginLeft: rel.inner < 0 ? `${(rel.inner + 100) / 2}%` : "50%",
-                      ...(rel.inner < 0 ? { marginLeft: `${(rel.inner + 100) / 2}%`, width: `${50 - (rel.inner + 100) / 2}%` } : { marginLeft: "50%", width: `${(rel.inner) / 2}%` })
-                    }} />
+                <span className="text-[10px] w-8" style={{color:'#6878a0'}}>内心</span>
+                <div className="flex-1 poke-bar relative" style={{height:6}}>
+                  <div className="poke-bar-fill" style={{...relBarStyle(rel.inner), backgroundColor: relColor(rel.inner), position:'absolute'}} />
                 </div>
                 <span className="text-[10px] w-8 text-right" style={{ color: relColor(rel.inner) }}>
                   {rel.inner > 0 ? "+" : ""}{rel.inner}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-text-dim w-8">表面</span>
-                <div className="flex-1 h-2 bg-border rounded overflow-hidden">
-                  <div className="h-full rounded transition-all"
-                    style={{
-                      ...(rel.outer < 0 ? { marginLeft: `${(rel.outer + 100) / 2}%`, width: `${50 - (rel.outer + 100) / 2}%` } : { marginLeft: "50%", width: `${(rel.outer) / 2}%` })
-                    }} />
+                <span className="text-[10px] w-8" style={{color:'#6878a0'}}>表面</span>
+                <div className="flex-1 poke-bar relative" style={{height:6}}>
+                  <div className="poke-bar-fill" style={{...relBarStyle(rel.outer), backgroundColor: relColor(rel.outer), position:'absolute'}} />
                 </div>
                 <span className="text-[10px] w-8 text-right" style={{ color: relColor(rel.outer) }}>
                   {rel.outer > 0 ? "+" : ""}{rel.outer}
                 </span>
               </div>
             </div>
-            <div className="text-[10px] text-text-dim mt-1">{rel.notes}</div>
+            <div className="text-[10px] mt-1" style={{color:'#6878a0'}}>{rel.notes}</div>
           </div>
         );
       })}
@@ -1666,13 +1666,13 @@ function DecisionTab({ npc }) {
   return (
     <div className="space-y-3">
       {npc.action && (
-        <div className="bg-bg rounded px-2 py-2 border border-border">
+        <div className="poke-card">
           <div className="text-[10px] text-text-dim mb-1">🎬 当前行为</div>
           <div className="text-xs">{npc.action}</div>
         </div>
       )}
       {npc.thought && (
-        <div className="bg-bg rounded px-2 py-2 border border-border">
+        <div className="poke-card">
           <div className="text-[10px] text-text-dim mb-1">💭 内心独白</div>
           <div className="text-xs italic">"{npc.thought}"</div>
         </div>
@@ -1724,7 +1724,7 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
       const reply = await chatWithNPC(apiConfig, npc, allNpcs, world, gameTime, history, text);
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
-      setMessages(prev => [...prev, { role: "assistant", content: `[错误] ${e.message}` }]);
+      setMessages(prev => [...prev, { role: "assistant", content: "[错误] " + e.message }]);
     } finally {
       setLoading(false);
     }
@@ -1739,7 +1739,7 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
 
   return (
     <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
-      <div className="text-[10px] text-text-dim mb-2 px-1">
+      <div className="text-[10px] mb-2 px-1" style={{color:'#6878a0'}}>
         以上帝视角和{npc.name}的分身对话，不影响世界运行。TA会按照自己的性格回应你。
       </div>
 
@@ -1748,12 +1748,13 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
         {messages.length === 0 && (
           <div className="text-center py-8">
             <div className="text-2xl mb-2">{npc.emoji}</div>
-            <div className="text-xs text-text-dim">试着和{npc.name}聊聊吧</div>
-            <div className="text-[10px] text-text-dim mt-1">比如问问TA对工作的看法、对同事的评价……</div>
+            <div className="text-xs" style={{color:'#6878a0'}}>试着和{npc.name}聊聊吧</div>
+            <div className="text-[10px] mt-1" style={{color:'#4a5a78'}}>比如问问TA对工作的看法、对同事的评价……</div>
             <div className="flex flex-wrap gap-1 mt-3 justify-center">
               {["最近工作怎么样？", "你觉得同事们怎么样？", "有什么烦心事吗？"].map((q, i) => (
                 <button key={i} onClick={() => { setInput(q); }}
-                  className="text-[10px] px-2 py-1 rounded border border-border text-text-dim hover:border-accent hover:text-accent cursor-pointer transition-all">
+                  className="text-[10px] px-2 py-1 cursor-pointer transition-all"
+                  style={{borderRadius:8, border:'2px solid #3a5888', color:'#8898b8', background:'#1e2c50'}}>
                   {q}
                 </button>
               ))}
@@ -1761,14 +1762,14 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
-              m.role === "user"
-                ? "bg-accent/20 text-accent border border-accent/30"
-                : "bg-card border border-border"
-            }`}>
+          <div key={i} className="flex" style={{justifyContent: m.role === "user" ? "flex-end" : "flex-start"}}>
+            <div className="max-w-[85%] rounded-lg px-3 py-2 text-xs"
+              style={m.role === "user"
+                ? {background:'rgba(72,208,240,0.12)', color:'#78d8f0', border:'2px solid rgba(72,208,240,0.3)'}
+                : {background:'#1e2c50', border:'2px solid #3a5888', color:'#d8dce8'}
+              }>
               {m.role === "assistant" && (
-                <div className="text-[10px] text-text-dim mb-1 flex items-center gap-1">
+                <div className="text-[10px] mb-1 flex items-center gap-1" style={{color:'#6878a0'}}>
                   <span>{npc.emoji}</span>
                   <span>{npc.name}</span>
                 </div>
@@ -1779,28 +1780,29 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs">
-              <span className="text-text-dim animate-pulse">{npc.name}正在思考...</span>
+            <div className="rounded-lg px-3 py-2 text-xs" style={{background:'#1e2c50', border:'2px solid #3a5888'}}>
+              <span className="animate-pulse" style={{color:'#6878a0'}}>{npc.name}正在思考...</span>
             </div>
           </div>
         )}
       </div>
 
       {/* 输入区 */}
-      <div className="flex gap-2 pt-2 border-t border-border">
+      <div className="flex gap-2 pt-2" style={{borderTop:'2px solid #3a5888'}}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`对${npc.name}说点什么...`}
+          placeholder={"对" + npc.name + "说点什么..."}
           disabled={loading}
-          className="flex-1 bg-bg border border-border rounded-lg px-3 py-2 text-xs focus:border-accent outline-none disabled:opacity-50"
+          style={{flex:1, background:'#0a1428', border:'2px solid #3a5888', borderRadius:10, padding:'6px 12px', fontSize:12, color:'#e8e4d8', outline:'none'}}
         />
         <button
           onClick={sendMessage}
           disabled={loading || !input.trim()}
-          className="px-3 py-2 rounded-lg text-xs bg-accent/20 border border-accent text-accent hover:bg-accent/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="btn-pokemon btn-pokemon-primary"
+          style={{fontSize:12, padding:'6px 14px'}}
         >
           发送
         </button>
@@ -1824,7 +1826,7 @@ function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, 
         {/* 时间进度条 - Pokemon HP bar style */}
         <div className="flex-1 mx-2 poke-bar">
           <div className="poke-bar-fill transition-all duration-300"
-            style={{ width: `${((gameTime.hour - 7) / 16) * 100}%`, background:'linear-gradient(90deg, #2898c8, #38c8e8)' }} />
+            style={{ width: (((gameTime.hour - 7) / 16) * 100) + '%', background:'linear-gradient(90deg, #2898c8, #38c8e8)' }} />
         </div>
 
         {isBusy && <span className="text-xs animate-pulse-glow" style={{color:'#38c8e8'}}>⟳ 推演中...</span>}
@@ -1837,7 +1839,7 @@ function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, 
           ▶ 下一步
         </button>
         <button onClick={onTogglePlay}
-          className={`btn-pokemon ${isPlaying ? 'btn-pokemon-danger' : 'btn-pokemon-secondary'}`}
+          className={"btn-pokemon " + (isPlaying ? "btn-pokemon-danger" : "btn-pokemon-secondary")}
           style={{fontSize:11, padding:'4px 12px'}}>
           {isPlaying ? "⏸ 暂停" : "⏩ 自动"}
         </button>
@@ -1909,7 +1911,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
         if (mutNpc) {
           setEvents((prev) => [...prev, {
             day: gameTime.day, hour: gameTime.hour,
-            text: `🔀 ${mutNpc.name}发生基因突变：${result.mutation.trait} ${result.mutation.old_value}→${result.mutation.new_value}（${result.mutation.reason}）`
+            text: "🔀 " + mutNpc.name + "发生基因突变：" + result.mutation.trait + " " + result.mutation.old_value + "→" + result.mutation.new_value + "（" + result.mutation.reason + "）"
           }]);
         }
       }
@@ -1960,7 +1962,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setShowIntervention(!showIntervention)}
-              className={`btn-pokemon ${showIntervention ? 'btn-pokemon-primary' : 'btn-pokemon-secondary'}`}
+              className={"btn-pokemon " + (showIntervention ? "btn-pokemon-primary" : "btn-pokemon-secondary")}
               style={{fontSize:11, padding:'4px 12px'}}>
               🌩️ 天命干预
             </button>
@@ -1979,7 +1981,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
               <button key={iv.id}
                 onClick={() => setIntervention(intervention === iv.id ? null : iv.id)}
                 title={iv.description}
-                className={`btn-pokemon ${intervention === iv.id ? 'btn-pokemon-primary' : 'btn-pokemon-secondary'}`}
+                className={"btn-pokemon " + (intervention === iv.id ? "btn-pokemon-primary" : "btn-pokemon-secondary")}
                 style={{fontSize:11, padding:'3px 10px'}}>
                 {iv.emoji} {iv.name}
               </button>
@@ -2005,7 +2007,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
       <aside className="simulation-panel">
         {/* Panel header - Pokemon gradient bar */}
         <div className="panel-header-pokemon">
-          <span>{selectedNpcData ? `${selectedNpcData.emoji} ${selectedNpcData.name}` : '🏢 世界总览'}</span>
+          <span>{selectedNpcData ? (selectedNpcData.emoji + " " + selectedNpcData.name) : "🏢 世界总览"}</span>
           {selectedNpcData && (
             <button onClick={() => setSelectedNPC(null)}
               style={{fontSize:10, color:'rgba(255,255,255,0.7)', cursor:'pointer', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:8, padding:'2px 8px'}}>
@@ -2024,13 +2026,13 @@ function SimulationScreen({ apiConfig, onSettings }) {
         {/* NPC快速选择栏 - Pokemon style */}
         <div className="npc-selector-bar">
           <button onClick={() => setSelectedNPC(null)}
-            className={`npc-selector-btn ${!selectedNPC ? 'active' : ''}`}>
+            className={"npc-selector-btn " + (!selectedNPC ? "active" : "")}>
             🏢
           </button>
           {npcs.map((n) => (
             <button key={n.id} onClick={() => setSelectedNPC(n.id === selectedNPC ? null : n.id)}
-              title={`${n.name} - ${n.state.mood}`}
-              className={`npc-selector-btn ${n.id === selectedNPC ? 'active' : ''}`}>
+              title={n.name + " - " + n.state.mood}
+              className={"npc-selector-btn " + (n.id === selectedNPC ? "active" : "")}>
               {n.emoji}
             </button>
           ))}
