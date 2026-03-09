@@ -196,34 +196,34 @@ function ApiSetupScreen({ config, onSave }) {
   const canSave = apiKey.trim() && model.trim();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8" style={{background:'linear-gradient(180deg, #0f1a32 0%, #1a2848 50%, #0f1a32 100%)'}}>
-      <div className="text-5xl mb-4">🏢</div>
-      <h1 className="text-2xl font-bold mb-2" style={{color:'#38c8e8'}}>像素办公室</h1>
-      <p className="mb-1 text-sm" style={{color:'#7a8aaa'}}>AI 世界模拟引擎 — 观察生命的涌现</p>
-      <p className="mb-8 text-xs" style={{color:'#4a5a78'}}>首次使用需要配置 API</p>
-      <div className="w-full max-w-md space-y-4" style={{background:'linear-gradient(180deg, #1a2848 0%, #162040 100%)', border:'2px solid #2a4a78', borderRadius:12, padding:24}}>
+    <div className="flex flex-col items-center justify-center min-h-screen p-8" style={{background:'radial-gradient(ellipse at center, #2a2a45 0%, #1a1a2e 65%, #0e1119 100%)'}}>
+      <div className="text-5xl mb-4">⭐</div>
+      <h1 className="text-2xl font-bold mb-2" style={{color:'#ffd700'}}>像素办公室</h1>
+      <p className="mb-1 text-sm" style={{color:'#9ca3af'}}>AI 世界模拟引擎 — 观察生命的涌现</p>
+      <p className="mb-8 text-xs" style={{color:'#64748b'}}>首次使用需要配置 API</p>
+      <div className="w-full max-w-md space-y-4" style={{background:'#141722', border:'2px solid #2a2a45', borderRadius:4, padding:24}}>
         <div>
-          <label className="text-xs block mb-1" style={{color:'#7a8aaa'}}>API Key *</label>
+          <label className="text-xs block mb-1" style={{color:'#9ca3af'}}>API Key *</label>
           <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}
             placeholder="你的 API 密钥"
-            style={{width:'100%', background:'#0f1a32', border:'2px solid #2a4a78', borderRadius:8, padding:'8px 12px', fontSize:13, color:'#e8e4d8', outline:'none'}} />
+            style={{width:'100%', background:'#0e1119', border:'2px solid #2a2a45', borderRadius:4, padding:'8px 12px', fontSize:13, color:'#e8e4d8', outline:'none'}} />
         </div>
         <div>
-          <label className="text-xs block mb-1" style={{color:'#7a8aaa'}}>模型 / 接入点 ID *</label>
+          <label className="text-xs block mb-1" style={{color:'#9ca3af'}}>模型 / 接入点 ID *</label>
           <input type="text" value={model} onChange={(e) => setModel(e.target.value)}
             placeholder="如 doubao-seed-2-0-pro-260215"
-            style={{width:'100%', background:'#0f1a32', border:'2px solid #2a4a78', borderRadius:8, padding:'8px 12px', fontSize:13, color:'#e8e4d8', outline:'none'}} />
+            style={{width:'100%', background:'#0e1119', border:'2px solid #2a2a45', borderRadius:4, padding:'8px 12px', fontSize:13, color:'#e8e4d8', outline:'none'}} />
         </div>
         <div>
-          <label className="text-xs block mb-1" style={{color:'#7a8aaa'}}>API 地址</label>
+          <label className="text-xs block mb-1" style={{color:'#9ca3af'}}>API 地址</label>
           <input type="text" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)}
-            style={{width:'100%', background:'#0f1a32', border:'2px solid #2a4a78', borderRadius:8, padding:'8px 12px', fontSize:11, color:'#e8e4d8', outline:'none', fontFamily:'monospace'}} />
-          <p className="text-xs mt-1" style={{color:'#4a5a78'}}>默认火山引擎 ARK，兼容 OpenAI 格式</p>
+            style={{width:'100%', background:'#0e1119', border:'2px solid #2a2a45', borderRadius:4, padding:'8px 12px', fontSize:11, color:'#e8e4d8', outline:'none', fontFamily:'monospace'}} />
+          <p className="text-xs mt-1" style={{color:'#64748b'}}>默认火山引擎 ARK，兼容 OpenAI 格式</p>
         </div>
         <button onClick={() => canSave && onSave({ apiKey: apiKey.trim(), baseUrl: baseUrl.trim(), model: model.trim() })}
           disabled={!canSave}
           className="btn-pokemon btn-pokemon-primary w-full"
-          style={{padding:'10px 0', fontSize:14, borderRadius:12}}>
+          style={{padding:'10px 0', fontSize:14, borderRadius:4}}>
           进入像素办公室
         </button>
       </div>
@@ -291,13 +291,17 @@ function drawBorder(ctx, x, y, w, h) {
   // Baseboard
   ctx.fillStyle='#7a6a50'; ctx.fillRect(x+3, y+3+wallH, w-6, 2);
 
-  // Border frame (thick golden wood)
-  ctx.fillStyle='#d8c888'; ctx.fillRect(x,y,w,4); ctx.fillRect(x,y,4,h);
-  ctx.fillStyle='#887838'; ctx.fillRect(x,y+h-4,w,4); ctx.fillRect(x+w-4,y,4,h);
-  // Inner edge
-  ctx.fillStyle='#b8a868'; ctx.fillRect(x+3,y+3,w-6,1); ctx.fillRect(x+3,y+3,1,h-6);
+  // Border frame (Star-Office deep purple-navy)
+  ctx.fillStyle='#2a2a45'; ctx.fillRect(x,y,w,3); ctx.fillRect(x,y,3,h);
+  ctx.fillStyle='#1a1a2e'; ctx.fillRect(x,y+h-3,w,3); ctx.fillRect(x+w-3,y,3,h);
+  // Inner edge highlight
+  ctx.fillStyle='#3a3a55'; ctx.fillRect(x+3,y+3,w-6,1); ctx.fillRect(x+3,y+3,1,h-6);
+  // Corner notch decorations (RPG dialog box style)
+  ctx.fillStyle='#1a1a2e';
+  ctx.fillRect(x,y,4,4); ctx.fillRect(x+w-4,y,4,4);
+  ctx.fillRect(x,y+h-4,4,4); ctx.fillRect(x+w-4,y+h-4,4,4);
   // Outer highlight
-  ctx.fillStyle='#e8d898'; ctx.fillRect(x,y,w,1); ctx.fillRect(x,y,1,h);
+  ctx.fillStyle='#3a3a55'; ctx.fillRect(x+1,y+1,w-2,1); ctx.fillRect(x+1,y+1,1,h-2);
 }
 
 // ─── 房间家具绘制系统（俯视图像素画）───
@@ -977,7 +981,7 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
       if (canvas.width!==cw||canvas.height!==ch) { canvas.width=cw; canvas.height=ch; }
       const ctx = canvas.getContext('2d');
       ctx.imageSmoothingEnabled = false;
-      ctx.fillStyle='#182038'; ctx.fillRect(0,0,cw,ch);
+      ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,cw,ch);
       const t = Date.now();
       const pad=8, gap=6, bw=3, labelH=20;
       const zoomed = zoomRef.current;
@@ -996,16 +1000,16 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         // Label - Pokemon style room name plate
         ctx.fillStyle='rgba(0,0,0,0.5)';
         ctx.fillRect(rx+bw+4, ry+bw+2, ctx.measureText(`${loc.emoji} ${loc.name}`).width+16||120, 22);
-        ctx.fillStyle='#38c8e8';
+        ctx.fillStyle='#ffd700';
         ctx.fillRect(rx+bw+4, ry+bw+2, 4, 22);
         ctx.fillStyle='#f0e8d0'; ctx.font='bold 14px monospace'; ctx.textBaseline='top';
         ctx.fillText(`${loc.emoji} ${loc.name}`, rx+bw+12, ry+bw+5);
 
         // Back button - Pokemon style
         const bbx=cw-pad-62, bby=pad+bw+3;
-        ctx.fillStyle='#2898c8';
+        ctx.fillStyle='#ffd700';
         ctx.beginPath(); ctx.roundRect(bbx,bby,54,20,8); ctx.fill();
-        ctx.fillStyle='#1878a8';
+        ctx.fillStyle='#0e1119';
         ctx.fillRect(bbx,bby+17,54,3);
         ctx.fillStyle='#fff'; ctx.font='bold 11px monospace';
         ctx.fillText('◀ 返回', bbx+8, bby+5);
@@ -1026,7 +1030,7 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           if (sc2) ctx.drawImage(sc2, nx, ny);
           // Selection - Pokemon style highlight
           if (npc.id===sel) {
-            ctx.strokeStyle='#38c8e8'; ctx.lineWidth=2;
+            ctx.strokeStyle='#ffd700'; ctx.lineWidth=2;
             ctx.strokeRect(nx-4,ny-4,sw+8,sh+28);
             ctx.fillStyle='rgba(56,200,232,0.08)';
             ctx.fillRect(nx-4,ny-4,sw+8,sh+28);
@@ -1036,8 +1040,8 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           ctx.fillText(npc.name, nx+sw/2, ny+sh+8); ctx.textAlign='left';
           // Mood bar - Pokemon HP bar style
           const mbw=32, mbx=nx+(sw-mbw)/2, mby=ny+sh+22;
-          ctx.fillStyle='#1a2848'; ctx.fillRect(mbx-1,mby-1,mbw+2,6);
-          ctx.fillStyle='#0a1428'; ctx.fillRect(mbx,mby,mbw,4);
+          ctx.fillStyle='#141722'; ctx.fillRect(mbx-1,mby-1,mbw+2,6);
+          ctx.fillStyle='#0e1119'; ctx.fillRect(mbx,mby,mbw,4);
           ctx.fillStyle=moodColor(npc.state.moodValue);
           ctx.fillRect(mbx,mby,mbw*npc.state.moodValue/100,4);
           // Thought bubble - Pokemon style
@@ -1048,22 +1052,22 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
             const tw = ctx.measureText(display).width+12;
             const bx2=nx+sw/2-tw/2, by2=ny-20;
             // Bubble background
-            ctx.fillStyle='rgba(15,24,40,0.92)';
+            ctx.fillStyle='rgba(20,23,34,0.95)';
             ctx.beginPath(); ctx.roundRect(bx2,by2,tw,18,6); ctx.fill();
-            ctx.strokeStyle = npc.thought ? '#38c8e8' : '#2a4a78';
+            ctx.strokeStyle = npc.thought ? '#ffd700' : '#2a2a45';
             ctx.lineWidth=1;
             ctx.beginPath(); ctx.roundRect(bx2,by2,tw,18,6); ctx.stroke();
             // Bubble arrow
-            ctx.fillStyle='rgba(15,24,40,0.92)';
+            ctx.fillStyle='rgba(20,23,34,0.95)';
             ctx.beginPath(); ctx.moveTo(nx+sw/2-4,by2+18); ctx.lineTo(nx+sw/2,by2+22); ctx.lineTo(nx+sw/2+4,by2+18); ctx.fill();
-            ctx.fillStyle = npc.thought ? '#68d8f0' : '#7a8aaa';
+            ctx.fillStyle = npc.thought ? '#ffd700' : '#9ca3af';
             ctx.textAlign='center';
             ctx.fillText(display, nx+sw/2, by2+4); ctx.textAlign='left';
           }
           nRects.push({id:npc.id, x:nx-4, y:ny-4, w:sw+8, h:sh+32});
         });
         if (present.length===0) {
-          ctx.fillStyle='#4a6a88'; ctx.font='12px monospace'; ctx.textAlign='center';
+          ctx.fillStyle='#9ca3af'; ctx.font='12px monospace'; ctx.textAlign='center';
           ctx.fillText('空无一人...', cw/2, ch/2); ctx.textAlign='left';
         }
         npcRectsRef.current = nRects;
@@ -1090,7 +1094,7 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           // Count badge - Pokemon style
           const present=ns.filter(n=>n.region===loc.id);
           if(present.length>0) {
-            ctx.fillStyle='#2898c8';
+            ctx.fillStyle='#ffd700';
             ctx.beginPath(); ctx.arc(rx+rw-bw-10, ry+bw+8, 8, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle='#fff';
           } else {
@@ -1112,13 +1116,13 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
             const spr=spriteCacheRef.current[npc.id]?.s;
             if(spr) ctx.drawImage(spr,nx,ny);
             // Selection - Pokemon style
-            if(npc.id===sel){ ctx.strokeStyle='#38c8e8'; ctx.lineWidth=1.5; ctx.strokeRect(nx-2,ny-2,sw+4,sh+14); }
+            if(npc.id===sel){ ctx.strokeStyle='#ffd700'; ctx.lineWidth=1.5; ctx.strokeRect(nx-2,ny-2,sw+4,sh+14); }
             // Name
             ctx.fillStyle='#f0e8d0'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
             ctx.fillText(npc.name, nx+sw/2, ny+sh+3); ctx.textAlign='left';
             // Mini mood - Pokemon HP bar
             const mbw2=22, mbx2=nx+(sw-mbw2)/2, mby2=ny+sh+12;
-            ctx.fillStyle='#0a1428'; ctx.fillRect(mbx2,mby2,mbw2,3);
+            ctx.fillStyle='#0e1119'; ctx.fillRect(mbx2,mby2,mbw2,3);
             ctx.fillStyle=moodColor(npc.state.moodValue);
             ctx.fillRect(mbx2,mby2,mbw2*npc.state.moodValue/100,3);
           });
@@ -1175,7 +1179,7 @@ function DialogueStream({ dialogues, npcs }) {
 
   if (dialogues.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-sm" style={{color:'#6878a0', background:'#141c34'}}>
+      <div className="flex-1 flex items-center justify-center text-sm" style={{color:'#9ca3af', background:'#141c34'}}>
         <div className="text-center">
           <div className="text-3xl mb-2">...</div>
           <div>点击下方播放按钮，世界开始运转</div>
@@ -1230,8 +1234,8 @@ function WorldDashboard({ world, npcs, events, tensions, gameTime }) {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="text-center py-2">
-        <div className="text-xl mb-1" style={{color:'#f0e8d0'}}>🏢 {world.name}</div>
-        <div className="text-xs" style={{color:'#68d0e8'}}>第{gameTime.day}天 {String(gameTime.hour).padStart(2, "0")}:00</div>
+        <div className="text-xl mb-1" style={{color:'#eee'}}>🏢 {world.name}</div>
+        <div className="text-xs" style={{color:'#ffd700'}}>第{gameTime.day}天 {String(gameTime.hour).padStart(2, "0")}:00</div>
       </div>
 
       {/* 资源仪表盘 */}
@@ -1241,8 +1245,8 @@ function WorldDashboard({ world, npcs, events, tensions, gameTime }) {
           {Object.entries(world.resources).map(([key, res]) => (
             <div key={key} className="poke-card">
               <div className="flex justify-between text-xs">
-                <span style={{color:'#c8d8e8'}}>{res.name}</span>
-                {res.total && <span style={{color:'#38c8e8'}}>{res.current}/{res.total}</span>}
+                <span style={{color:'#ddd'}}>{res.name}</span>
+                {res.total && <span style={{color:'#ffd700'}}>{res.current}/{res.total}</span>}
               </div>
               {res.total && (
                 <div className="poke-bar mt-1.5">
@@ -1252,7 +1256,7 @@ function WorldDashboard({ world, npcs, events, tensions, gameTime }) {
                   }} />
                 </div>
               )}
-              <div className="text-[10px] mt-0.5" style={{color:'#6878a0'}}>{res.desc}</div>
+              <div className="text-[10px] mt-0.5" style={{color:'#9ca3af'}}>{res.desc}</div>
             </div>
           ))}
         </div>
@@ -1268,10 +1272,10 @@ function WorldDashboard({ world, npcs, events, tensions, gameTime }) {
               const b = npcs.find((n) => n.id === t.between[1]);
               return (
                 <div key={i} className="poke-card text-xs flex items-center gap-2" style={{padding:'6px 10px'}}>
-                  <span style={{color:'#c8d8e8'}}>{a?.emoji}{a?.name}</span>
+                  <span style={{color:'#ddd'}}>{a?.emoji}{a?.name}</span>
                   <span style={{color:'#d85858'}}>{"⚡".repeat(Math.min(t.level, 5))}</span>
-                  <span style={{color:'#c8d8e8'}}>{b?.emoji}{b?.name}</span>
-                  <span style={{color:'#6878a0', marginLeft:'auto'}}>{t.about}</span>
+                  <span style={{color:'#ddd'}}>{b?.emoji}{b?.name}</span>
+                  <span style={{color:'#9ca3af', marginLeft:'auto'}}>{t.about}</span>
                 </div>
               );
             })}
@@ -1283,12 +1287,12 @@ function WorldDashboard({ world, npcs, events, tensions, gameTime }) {
       <div>
         <div className="panel-section-title">📜 事件编年史</div>
         {events.length === 0 ? (
-          <div className="text-xs text-center py-4" style={{color:'#6878a0'}}>世界尚未开始...</div>
+          <div className="text-xs text-center py-4" style={{color:'#9ca3af'}}>世界尚未开始...</div>
         ) : (
           <div className="space-y-1.5 max-h-60 overflow-y-auto">
             {[...events].reverse().map((ev, i) => (
               <div key={i} className="poke-card text-xs animate-fade-in">
-                <span style={{color:'#38c8e8', fontWeight:600}}>D{ev.day} {ev.hour}h</span> {ev.text}
+                <span style={{color:'#ffd700', fontWeight:600}}>D{ev.day} {ev.hour}h</span> {ev.text}
               </div>
             ))}
           </div>
@@ -1300,7 +1304,7 @@ function WorldDashboard({ world, npcs, events, tensions, gameTime }) {
         <div className="panel-section-title">📋 世界规则</div>
         <div className="space-y-1">
           {world.rules.map((rule, i) => (
-            <div key={i} className="text-[10px]" style={{color:'#6878a0'}}>· {rule}</div>
+            <div key={i} className="text-[10px]" style={{color:'#9ca3af'}}>· {rule}</div>
           ))}
         </div>
       </div>
@@ -1325,36 +1329,35 @@ function NPCPanel({ npc, allNpcs, apiConfig, world, gameTime }) {
   return (
     <div className="animate-fade-in flex flex-col h-full">
       {/* NPC头部 - Pokemon style */}
-      <div className="flex items-center gap-3 pb-3" style={{borderBottom:'2px solid #2a4a78'}}>
+      <div className="flex items-center gap-3 pb-3" style={{borderBottom:'2px solid #2a2a45'}}>
         <div style={{
           width:48, height:48, borderRadius:8,
-          background:'linear-gradient(135deg, #1a3058 0%, #0f1a32 100%)',
-          border:'2px solid #2a4a78',
+          background:'#1a1a2e',
+          border:'2px solid #2a2a45',
           display:'flex', alignItems:'center', justifyContent:'center',
           fontSize:24, flexShrink:0
         }}>{npc.emoji}</div>
         <div className="flex-1 min-w-0">
-          <div className="font-bold" style={{color:'#38c8e8', fontSize:15}}>{npc.name}</div>
-          <div className="text-xs" style={{color:'#7a8aaa'}}>{npc.title} | {npc.age}岁</div>
+          <div className="font-bold" style={{color:'#ffd700', fontSize:15}}>{npc.name}</div>
+          <div className="text-xs" style={{color:'#9ca3af'}}>{npc.title} | {npc.age}岁</div>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-[10px] px-1.5 py-0.5 rounded" style={{background:'rgba(56,182,210,0.15)', color:'#68d8f0', border:'1px solid rgba(56,182,210,0.3)'}}>{npc.state.mood}</span>
-            <span className="text-[10px]" style={{color:'#7a8aaa'}}>压力{npc.state.pressure} 精力{npc.state.energy}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded" style={{background:'rgba(255,215,0,0.1)', color:'#ffd700', border:'1px solid rgba(255,215,0,0.2)'}}>{npc.state.mood}</span>
+            <span className="text-[10px]" style={{color:'#9ca3af'}}>压力{npc.state.pressure} 精力{npc.state.energy}</span>
           </div>
         </div>
       </div>
 
       {/* Tab栏 - Pokemon style */}
-      <div className="flex gap-1 py-2 overflow-x-auto" style={{borderBottom:'2px solid #2a4a78'}}>
+      <div className="flex gap-1 py-2 overflow-x-auto" style={{borderBottom:'2px solid #2a2a45'}}>
         {tabs.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className="px-2 py-1 rounded-lg text-[10px] cursor-pointer transition-all whitespace-nowrap font-semibold"
             style={tab === t.id ? {
-              background:'linear-gradient(180deg, #2898c8 0%, #2080a8 100%)',
-              color:'#fff', border:'1px solid #1870a0',
-              boxShadow:'0 2px 4px rgba(0,0,0,0.3)',
-              textShadow:'0 1px 0 rgba(0,0,0,0.2)'
+              background:'rgba(255,215,0,0.1)',
+              color:'#ffd700', border:'1px solid rgba(255,215,0,0.3)',
+              boxShadow:'0 0 8px rgba(255,215,0,0.1)'
             } : {
-              background:'transparent', color:'#6878a0',
+              background:'transparent', color:'#9ca3af',
               border:'1px solid transparent'
             }}>
             {t.icon} {t.label}
@@ -1382,7 +1385,7 @@ function SoulTab({ npc }) {
   const { gene, personality } = npc;
   return (
     <div className="space-y-3">
-      <div className="text-xs" style={{color:'#8898b8'}}>{npc.background}</div>
+      <div className="text-xs" style={{color:'#9ca3af'}}>{npc.background}</div>
 
       <div>
         <div className="panel-section-title">核心驱力</div>
@@ -1448,12 +1451,12 @@ function SoulTab({ npc }) {
 function GeneBar({ label, value, color = "#58c878" }) {
   return (
     <div className="flex items-center gap-2 mb-1">
-      <span className="text-[10px] w-20 shrink-0 truncate" style={{color:'#7a8aaa'}}>{label}</span>
+      <span className="text-[10px] w-20 shrink-0 truncate" style={{color:'#9ca3af'}}>{label}</span>
       <div className="flex-1 poke-bar" style={{height:6}}>
         <div className="poke-bar-fill"
           style={{ width: `${value * 100}%`, backgroundColor: color }} />
       </div>
-      <span className="text-[10px] w-8 text-right" style={{color:'#a8c8e8'}}>{value.toFixed(2)}</span>
+      <span className="text-[10px] w-8 text-right" style={{color:'#cbd5e1'}}>{value.toFixed(2)}</span>
     </div>
   );
 }
@@ -1463,12 +1466,12 @@ function GoalsTab({ npc }) {
   const sorted = Object.entries(npc.goals).sort((a, b) => b[1].priority - a[1].priority);
   return (
     <div className="space-y-2">
-      <div className="text-[10px]" style={{color:'#6878a0'}}>目标优先级由基因核心驱力决定，满足度受环境影响</div>
+      <div className="text-[10px]" style={{color:'#9ca3af'}}>目标优先级由基因核心驱力决定，满足度受环境影响</div>
       {sorted.map(([name, goal]) => (
         <div key={name} className="poke-card">
           <div className="flex justify-between items-center">
             <span className="text-xs font-semibold">{goal.priority >= 4 ? "❗" : "  "} {name}</span>
-            <span className="text-[10px]" style={{color:'#48d0f0'}}>优先级 {goal.priority}/5</span>
+            <span className="text-[10px]" style={{color:'#ffd700'}}>优先级 {goal.priority}/5</span>
           </div>
           <div className="poke-bar mt-1.5">
             <div className="poke-bar-fill" style={{
@@ -1477,7 +1480,7 @@ function GoalsTab({ npc }) {
             }} />
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-[10px]" style={{color:'#6878a0'}}>{goal.desc}</span>
+            <span className="text-[10px]" style={{color:'#9ca3af'}}>{goal.desc}</span>
             <span className="text-[10px]">{goal.satisfaction}%</span>
           </div>
         </div>
@@ -1512,7 +1515,7 @@ function MemoryTab({ npc }) {
         {(!memories.long || memories.long.length === 0)
           ? <div className="text-[10px] text-text-dim">暂无</div>
           : memories.long.map((m, i) => (
-            <div key={i} className="text-[10px] poke-card" style={{padding:'5px 10px', borderColor:'#2898c8', color:'#78d8f0'}}>{m}</div>
+            <div key={i} className="text-[10px] poke-card" style={{padding:'5px 10px', borderColor:'#ffd700', color:'#ffd700'}}>{m}</div>
           ))}
       </div>
     </div>
@@ -1570,7 +1573,7 @@ function StateTab({ npc }) {
       {gauges.map((g) => (
         <div key={g.label} className="poke-card" style={g.warn ? {borderColor:'#e86060'} : {}}>
           <div className="flex justify-between text-xs">
-            <span style={{color:'#c8d8e8'}}>{g.label}</span>
+            <span style={{color:'#ddd'}}>{g.label}</span>
             <span style={{ color: g.color }}>{g.value}/100 {g.desc}</span>
           </div>
           <div className="poke-bar mt-1.5">
@@ -1582,7 +1585,7 @@ function StateTab({ npc }) {
       <div className="poke-card">
         <div className="flex justify-between text-xs">
           <span>薪资</span>
-          <span style={{color:'#48d0f0'}}>¥{state.salary?.toLocaleString()}</span>
+          <span style={{color:'#ffd700'}}>¥{state.salary?.toLocaleString()}</span>
         </div>
       </div>
 
@@ -1618,11 +1621,11 @@ function relBarStyle(val) {
 
 function RelationsTab({ npc, allNpcs }) {
   const rels = npc.relationships || {};
-  if (Object.keys(rels).length === 0) return <div className="text-xs" style={{color:'#6878a0'}}>暂无关系数据</div>;
+  if (Object.keys(rels).length === 0) return <div className="text-xs" style={{color:'#9ca3af'}}>暂无关系数据</div>;
 
   return (
     <div className="space-y-2">
-      <div className="text-[10px]" style={{color:'#6878a0'}}>内心真实态度 vs 外在表现 — 差值越大越"城府深"</div>
+      <div className="text-[10px]" style={{color:'#9ca3af'}}>内心真实态度 vs 外在表现 — 差值越大越"城府深"</div>
       {Object.entries(rels).map(([tid, rel]) => {
         const target = allNpcs.find((n) => n.id === tid);
         if (!target) return null;
@@ -1630,12 +1633,12 @@ function RelationsTab({ npc, allNpcs }) {
         return (
           <div key={tid} className="poke-card">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs" style={{color:'#c8d8e8'}}>{target.emoji} {target.name}</span>
+              <span className="text-xs" style={{color:'#ddd'}}>{target.emoji} {target.name}</span>
               {gap > 20 && <span className="text-[10px]" style={{color:'#e86060'}}>🎭 城府深</span>}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] w-8" style={{color:'#6878a0'}}>内心</span>
+                <span className="text-[10px] w-8" style={{color:'#9ca3af'}}>内心</span>
                 <div className="flex-1 poke-bar relative" style={{height:6}}>
                   <div className="poke-bar-fill" style={{...relBarStyle(rel.inner), backgroundColor: relColor(rel.inner), position:'absolute'}} />
                 </div>
@@ -1644,7 +1647,7 @@ function RelationsTab({ npc, allNpcs }) {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] w-8" style={{color:'#6878a0'}}>表面</span>
+                <span className="text-[10px] w-8" style={{color:'#9ca3af'}}>表面</span>
                 <div className="flex-1 poke-bar relative" style={{height:6}}>
                   <div className="poke-bar-fill" style={{...relBarStyle(rel.outer), backgroundColor: relColor(rel.outer), position:'absolute'}} />
                 </div>
@@ -1653,7 +1656,7 @@ function RelationsTab({ npc, allNpcs }) {
                 </span>
               </div>
             </div>
-            <div className="text-[10px] mt-1" style={{color:'#6878a0'}}>{rel.notes}</div>
+            <div className="text-[10px] mt-1" style={{color:'#9ca3af'}}>{rel.notes}</div>
           </div>
         );
       })}
@@ -1739,7 +1742,7 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
 
   return (
     <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
-      <div className="text-[10px] mb-2 px-1" style={{color:'#6878a0'}}>
+      <div className="text-[10px] mb-2 px-1" style={{color:'#9ca3af'}}>
         以上帝视角和{npc.name}的分身对话，不影响世界运行。TA会按照自己的性格回应你。
       </div>
 
@@ -1748,13 +1751,13 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
         {messages.length === 0 && (
           <div className="text-center py-8">
             <div className="text-2xl mb-2">{npc.emoji}</div>
-            <div className="text-xs" style={{color:'#6878a0'}}>试着和{npc.name}聊聊吧</div>
-            <div className="text-[10px] mt-1" style={{color:'#4a5a78'}}>比如问问TA对工作的看法、对同事的评价……</div>
+            <div className="text-xs" style={{color:'#9ca3af'}}>试着和{npc.name}聊聊吧</div>
+            <div className="text-[10px] mt-1" style={{color:'#64748b'}}>比如问问TA对工作的看法、对同事的评价……</div>
             <div className="flex flex-wrap gap-1 mt-3 justify-center">
               {["最近工作怎么样？", "你觉得同事们怎么样？", "有什么烦心事吗？"].map((q, i) => (
                 <button key={i} onClick={() => { setInput(q); }}
                   className="text-[10px] px-2 py-1 cursor-pointer transition-all"
-                  style={{borderRadius:8, border:'2px solid #3a5888', color:'#8898b8', background:'#1e2c50'}}>
+                  style={{borderRadius:8, border:'2px solid #2a2a45', color:'#9ca3af', background:'#1e2c50'}}>
                   {q}
                 </button>
               ))}
@@ -1765,11 +1768,11 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
           <div key={i} className="flex" style={{justifyContent: m.role === "user" ? "flex-end" : "flex-start"}}>
             <div className="max-w-[85%] rounded-lg px-3 py-2 text-xs"
               style={m.role === "user"
-                ? {background:'rgba(72,208,240,0.12)', color:'#78d8f0', border:'2px solid rgba(72,208,240,0.3)'}
-                : {background:'#1e2c50', border:'2px solid #3a5888', color:'#d8dce8'}
+                ? {background:'rgba(255,215,0,0.08)', color:'#ffd700', border:'2px solid rgba(255,215,0,0.2)'}
+                : {background:'#1a1a2e', border:'2px solid #2a2a45', color:'#d8dce8'}
               }>
               {m.role === "assistant" && (
-                <div className="text-[10px] mb-1 flex items-center gap-1" style={{color:'#6878a0'}}>
+                <div className="text-[10px] mb-1 flex items-center gap-1" style={{color:'#9ca3af'}}>
                   <span>{npc.emoji}</span>
                   <span>{npc.name}</span>
                 </div>
@@ -1780,8 +1783,8 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="rounded-lg px-3 py-2 text-xs" style={{background:'#1e2c50', border:'2px solid #3a5888'}}>
-              <span className="animate-pulse" style={{color:'#6878a0'}}>{npc.name}正在思考...</span>
+            <div className="rounded-lg px-3 py-2 text-xs" style={{background:'#1a1a2e', border:'2px solid #2a2a45'}}>
+              <span className="animate-pulse" style={{color:'#9ca3af'}}>{npc.name}正在思考...</span>
             </div>
           </div>
         )}
@@ -1796,7 +1799,7 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
           onKeyDown={handleKeyDown}
           placeholder={"对" + npc.name + "说点什么..."}
           disabled={loading}
-          style={{flex:1, background:'#0a1428', border:'2px solid #3a5888', borderRadius:10, padding:'6px 12px', fontSize:12, color:'#e8e4d8', outline:'none'}}
+          style={{flex:1, background:'#0e1119', border:'2px solid #2a2a45', borderRadius:10, padding:'6px 12px', fontSize:12, color:'#e8e4d8', outline:'none'}}
         />
         <button
           onClick={sendMessage}
@@ -1818,18 +1821,18 @@ function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, 
   return (
     <div className="time-bar">
       <div className="flex items-center gap-3 flex-1">
-        <span className="text-sm font-bold" style={{color:'#38c8e8'}}>
+        <span className="text-sm font-bold" style={{color:'#ffd700'}}>
           第{gameTime.day}天 {String(gameTime.hour).padStart(2, "0")}:00
         </span>
-        <span className="text-xs" style={{color:'#6878a0'}}>{hourLabel}</span>
+        <span className="text-xs" style={{color:'#9ca3af'}}>{hourLabel}</span>
 
         {/* 时间进度条 - Pokemon HP bar style */}
         <div className="flex-1 mx-2 poke-bar">
           <div className="poke-bar-fill transition-all duration-300"
-            style={{ width: (((gameTime.hour - 7) / 16) * 100) + '%', background:'linear-gradient(90deg, #2898c8, #38c8e8)' }} />
+            style={{ width: (((gameTime.hour - 7) / 16) * 100) + '%', background:'linear-gradient(90deg, #e94560, #ffd700)' }} />
         </div>
 
-        {isBusy && <span className="text-xs animate-pulse-glow" style={{color:'#38c8e8'}}>⟳ 推演中...</span>}
+        {isBusy && <span className="text-xs animate-pulse-glow" style={{color:'#ffd700'}}>⟳ 推演中...</span>}
       </div>
 
       <div className="flex items-center gap-2">
@@ -1957,7 +1960,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
         {/* 顶栏 */}
         <header className="sim-header">
           <div className="flex items-center gap-3">
-            <span className="text-lg font-bold" style={{color:'#f0e8d0'}}>🏢 像素办公室</span>
+            <span className="text-lg font-bold" style={{color:'#ffd700'}}>⭐ 像素办公室</span>
             {error && <span style={{color:'#d85858', fontSize:12}}>{error}</span>}
           </div>
           <div className="flex items-center gap-2">
@@ -1986,7 +1989,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
                 {iv.emoji} {iv.name}
               </button>
             ))}
-            {intervention && <span className="text-xs ml-2" style={{color:'#38c8e8'}}>⚡ 下次推演时生效</span>}
+            {intervention && <span className="text-xs ml-2" style={{color:'#ffd700'}}>⚡ 下次推演时生效</span>}
           </div>
         )}
 
@@ -2010,7 +2013,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
           <span>{selectedNpcData ? (selectedNpcData.emoji + " " + selectedNpcData.name) : "🏢 世界总览"}</span>
           {selectedNpcData && (
             <button onClick={() => setSelectedNPC(null)}
-              style={{fontSize:10, color:'rgba(255,255,255,0.7)', cursor:'pointer', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:8, padding:'2px 8px'}}>
+              style={{fontSize:10, color:'#ffd700', cursor:'pointer', background:'rgba(255,215,0,0.1)', border:'1px solid rgba(255,215,0,0.2)', borderRadius:4, padding:'2px 8px'}}>
               返回
             </button>
           )}
