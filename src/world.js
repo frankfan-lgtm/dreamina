@@ -8,12 +8,12 @@ export const WORLD_CONFIG = {
   name: "字节跳动办公室",
   description: "一个互联网大厂的日常办公环境，资源有限但人人都有自己想要的",
   locations: [
-    { id: "desk", name: "工位区", emoji: "🖥️", color: "#1a2a3a", desc: "一排排工位，键盘声此起彼伏" },
-    { id: "meeting", name: "会议室", emoji: "📊", color: "#2a1a3a", desc: "透明玻璃隔断，白板上写满了OKR" },
-    { id: "pantry", name: "茶水间", emoji: "☕", color: "#3a2a1a", desc: "咖啡机旁边是八卦集散地" },
-    { id: "boss", name: "领导办公室", emoji: "🚪", color: "#1a3a2a", desc: "门总是半掩着，谁也猜不透里面在想什么" },
-    { id: "canteen", name: "食堂", emoji: "🍜", color: "#3a3a1a", desc: "午餐时间是难得的放松时刻" },
-    { id: "home", name: "家", emoji: "🏠", color: "#2a2a3a", desc: "一天的疲惫在这里卸下——或者继续" },
+    { id: "desk", name: "工位区", emoji: "🖥️", color: "#2a2a48", desc: "一排排工位，键盘声此起彼伏" },
+    { id: "meeting", name: "会议室", emoji: "📊", color: "#3a2848", desc: "透明玻璃隔断，白板上写满了OKR" },
+    { id: "pantry", name: "茶水间", emoji: "☕", color: "#483828", desc: "咖啡机旁边是八卦集散地" },
+    { id: "boss", name: "领导办公室", emoji: "🚪", color: "#284838", desc: "门总是半掩着，谁也猜不透里面在想什么" },
+    { id: "canteen", name: "食堂", emoji: "🍜", color: "#484828", desc: "午餐时间是难得的放松时刻" },
+    { id: "home", name: "家", emoji: "🏠", color: "#2a2838", desc: "一天的疲惫在这里卸下——或者继续" },
   ],
   resources: {
     hc: { name: "HC（人员编制）", total: 6, current: 6, desc: "裁员时名额有限" },

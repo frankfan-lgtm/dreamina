@@ -23,128 +23,138 @@ function barStr(val, max = 100) {
   return `${pct}%`;
 }
 
-// ─── 像素精灵定义（宠物小精灵风格）───
-const SPRITE_DATA = {
+// ─── 像素精灵系统（Pokemon overworld 风格）───
+// 调色板: H=发色 h=发色亮 S=肤色 s=肤色暗 T=上衣 t=上衣暗 P=裤子 p=裤子暗 E=眼睛 W=眼白
+// '.' = 透明, 自动描边生成轮廓线
+
+const MALE_BODY = [ // 短发男性模板 (9x15)
+  "...HHH...",
+  "..HHhHH..",
+  "..HHHHH..",
+  ".SSSSSSS.",
+  ".S.SSS.S.",
+  "..sSSss..",
+  "...SS....",
+  "..tTTTt..",
+  ".TTTTTTT.",
+  ".sTTTTTs.",
+  "..TtTtT..",
+  "..PPPPP..",
+  "..PP.PP..",
+  "..pp.pp..",
+];
+
+const FEMALE_BODY = [ // 长发女性模板 (9x15)
+  "..hHHHh..",
+  ".hHHHHHh.",
+  ".HHHHHHH.",
+  "HHSSSSSAH",
+  "HHS.S.SAH",
+  ".HsSSSs..",
+  "..HSS.H..",
+  "..tTTTt..",
+  ".TTTTTTT.",
+  ".sTTTTTs.",
+  "..TtTtT..",
+  "..PPPPP..",
+  "..PP.PP..",
+  "..pp.pp..",
+];
+
+const SPRITE_COLORS = {
   zhangwei: { // 程序员 - 蓝衣
-    hair: "#2a2a3a", skin: "#f0c8a0", shirt: "#4080c0", pants: "#2a3a5a",
-    pixels: [
-      "..HH..",
-      ".HHHH.",
-      ".SSSS.",
-      ".SSSS.",
-      "..SS..",
-      ".TTTT.",
-      "TTTTTT",
-      ".TTTT.",
-      ".PPPP.",
-      ".PP.PP",
-    ]
+    H: "#2a2a4a", h: "#3a3a5a", S: "#f0c8a0", s: "#d8b090",
+    T: "#4488cc", t: "#3366aa", P: "#2a3a5a", p: "#1a2a40",
+    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+    body: "male",
   },
   linting: { // PM - 红衣长发
-    hair: "#3a2020", skin: "#f0c8a0", shirt: "#c05050", pants: "#4a3050",
-    pixels: [
-      ".HHHH.",
-      "HHHHHH",
-      "H.SS.H",
-      "H.SS.H",
-      "..SS..",
-      ".TTTT.",
-      ".TTTT.",
-      ".TTTT.",
-      ".PPPP.",
-      ".PP.PP",
-    ]
+    H: "#5a2020", h: "#7a3030", S: "#f0c8a0", s: "#d8b090",
+    T: "#cc4444", t: "#aa3333", P: "#4a3050", p: "#3a2040",
+    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+    body: "female",
   },
   zhaopeng: { // 领导 - 深色西装
-    hair: "#1a1a2a", skin: "#e8c098", shirt: "#2a2a3a", pants: "#1a1a2a",
-    pixels: [
-      "..HH..",
-      ".HHHH.",
-      ".SSSS.",
-      ".SSSS.",
-      "..SS..",
-      ".TTTT.",
-      "TTTTTT",
-      ".TTTT.",
-      ".PPPP.",
-      ".PP.PP",
-    ]
+    H: "#1a1a2a", h: "#2a2a3a", S: "#e8c098", s: "#d0a880",
+    T: "#2a2a3a", t: "#1a1a2a", P: "#1a1a2a", p: "#101018",
+    E: "#1a1520", W: "#e0e0e0", A: "#e8c098",
+    body: "male",
   },
-  liufang: { // 新人 - 绿衣短发
-    hair: "#4a3030", skin: "#f0c8a0", shirt: "#50a060", pants: "#3a4a5a",
-    pixels: [
-      ".HHHH.",
-      ".HHHH.",
-      ".SSSS.",
-      ".SSSS.",
-      "..SS..",
-      ".TTTT.",
-      ".TTTT.",
-      ".TTTT.",
-      ".PPPP.",
-      ".PP.PP",
-    ]
+  liufang: { // 新人 - 绿衣齐刘海
+    H: "#5a3828", h: "#7a4838", S: "#f0c8a0", s: "#d8b090",
+    T: "#50a860", t: "#408848", P: "#3a4a5a", p: "#2a3a4a",
+    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+    body: "female",
   },
   chenxi: { // 设计师 - 紫衣
-    hair: "#3a2a40", skin: "#f0c8a0", shirt: "#8060b0", pants: "#3a3050",
-    pixels: [
-      "..HH..",
-      ".HHHH.",
-      ".SSSS.",
-      ".SSSS.",
-      "..SS..",
-      ".TTTT.",
-      "TTTTTT",
-      ".TTTT.",
-      ".PPPP.",
-      ".PP.PP",
-    ]
+    H: "#3a2a40", h: "#4a3a50", S: "#f0c8a0", s: "#d8b090",
+    T: "#8060b0", t: "#604890", P: "#3a3050", p: "#2a2040",
+    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+    body: "male",
   },
   wangli: { // HR - 橙衣长发
-    hair: "#5a3020", skin: "#f0c8a0", shirt: "#c08850", pants: "#4a3a50",
-    pixels: [
-      ".HHHH.",
-      "HHHHHH",
-      "H.SS.H",
-      "H.SS.H",
-      "..SS..",
-      ".TTTT.",
-      ".TTTT.",
-      ".TTTT.",
-      ".PPPP.",
-      ".PP.PP",
-    ]
+    H: "#6a3820", h: "#8a4830", S: "#f0c8a0", s: "#d8b090",
+    T: "#c08850", t: "#a07040", P: "#4a3a50", p: "#3a2a40",
+    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+    body: "female",
   },
 };
 
-function PixelSprite({ npcId, size = 3 }) {
-  const data = SPRITE_DATA[npcId];
-  if (!data) return <span style={{ fontSize: 24 }}>?</span>;
+// 缓存渲染结果
+const spriteCache = {};
 
-  const colorMap = { H: data.hair, S: data.skin, T: data.shirt, P: data.pants };
+function buildSpriteShadows(npcId, size) {
+  const key = `${npcId}_${size}`;
+  if (spriteCache[key]) return spriteCache[key];
+
+  const colors = SPRITE_COLORS[npcId];
+  if (!colors) return null;
+
+  const rows = colors.body === "male" ? MALE_BODY : FEMALE_BODY;
+  const outline = "#12101a";
+  const w = rows[0].length;
+  const h = rows.length;
+
+  // Build color grid
+  const grid = rows.map(row =>
+    [...row].map(ch => ch === "." ? null : (colors[ch] || null))
+  );
+
   const shadows = [];
-  data.pixels.forEach((row, y) => {
-    [...row].forEach((ch, x) => {
-      if (ch !== ".") {
-        shadows.push(`${x * size}px ${y * size}px 0 ${colorMap[ch]}`);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (grid[y][x]) {
+        shadows.push(`${x * size}px ${y * size}px 0 ${grid[y][x]}`);
+      } else {
+        // Auto-outline: transparent pixel adjacent to colored pixel
+        let near = false;
+        for (let dy = -1; dy <= 1 && !near; dy++) {
+          for (let dx = -1; dx <= 1 && !near; dx++) {
+            if (dy === 0 && dx === 0) continue;
+            const ny = y + dy, nx = x + dx;
+            if (ny >= 0 && ny < h && nx >= 0 && nx < w && grid[ny][nx]) near = true;
+          }
+        }
+        if (near) shadows.push(`${x * size}px ${y * size}px 0 ${outline}`);
       }
-    });
-  });
+    }
+  }
+
+  const result = { shadows: shadows.join(","), w: w * size, h: h * size };
+  spriteCache[key] = result;
+  return result;
+}
+
+function PixelSprite({ npcId, size = 4 }) {
+  const sprite = buildSpriteShadows(npcId, size);
+  if (!sprite) return <span style={{ fontSize: 10 }}>?</span>;
 
   return (
-    <div style={{
-      width: data.pixels[0].length * size,
-      height: data.pixels.length * size,
-      position: "relative",
-    }}>
+    <div style={{ width: sprite.w, height: sprite.h, position: "relative", flexShrink: 0 }}>
       <div style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: size,
-        height: size,
-        boxShadow: shadows.join(","),
-        imageRendering: "pixelated",
+        position: "absolute", top: 0, left: 0,
+        width: size, height: size,
+        boxShadow: sprite.shadows,
       }} />
     </div>
   );
