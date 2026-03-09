@@ -72,7 +72,7 @@ app.post("/api/claude", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`\n🌌 创世模拟器已启动！`);
   console.log(`👉 打开浏览器访问: http://localhost:${PORT}`);
   console.log(`\n支持火山引擎 / OpenAI 兼容 API\n`);
