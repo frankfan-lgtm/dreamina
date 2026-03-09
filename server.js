@@ -10,44 +10,54 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.static(join(__dirname, "dist")));
 
 app.post("/api/claude", async (req, res) => {
-  const { systemPrompt, userPrompt, apiKey } = req.body;
+  const { systemPrompt, userPrompt, apiKey, baseUrl, model } = req.body;
 
   if (!systemPrompt || !userPrompt) {
     return res.status(400).json({ error: "缺少 systemPrompt 或 userPrompt" });
   }
 
-  const key = apiKey || process.env.ANTHROPIC_API_KEY;
+  const key = apiKey || process.env.API_KEY;
   if (!key) {
-    return res.status(400).json({ error: "缺少 API Key，请在界面输入或设置 ANTHROPIC_API_KEY 环境变量" });
+    return res.status(400).json({ error: "缺少 API Key，请在界面设置中输入" });
+  }
+
+  const url = baseUrl || process.env.API_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+  const modelId = model || process.env.API_MODEL || "";
+
+  if (!modelId) {
+    return res.status(400).json({ error: "缺少模型/接入点 ID，请在界面设置中输入（如 ep-xxxxx 或 doubao-pro-32k）" });
   }
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: modelId,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
         max_tokens: 4096,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
+        temperature: 0.8,
       }),
     });
 
     if (!response.ok) {
       const err = await response.text();
-      console.error("Anthropic API 错误:", response.status, err);
+      console.error("API 错误:", response.status, err);
       return res.status(response.status).json({
         error: `API 调用失败 (${response.status}): ${err}`,
       });
     }
 
     const data = await response.json();
-    const text = data.content?.[0]?.text;
+    const text = data.choices?.[0]?.message?.content;
     if (!text) {
+      console.error("API 返回:", JSON.stringify(data));
       return res.status(500).json({ error: "API 返回内容为空" });
     }
 
@@ -61,5 +71,5 @@ app.post("/api/claude", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`\n🌌 创世模拟器已启动！`);
   console.log(`👉 打开浏览器访问: http://localhost:${PORT}`);
-  console.log(`\n支持方式：界面输入 API Key 或设置 ANTHROPIC_API_KEY 环境变量\n`);
+  console.log(`\n支持火山引擎 / OpenAI 兼容 API\n`);
 });

@@ -15,7 +15,7 @@ function sentimentColor(val) {
   return "#605868";
 }
 
-const API_KEY_STORAGE_KEY = "dreamina_api_key";
+const STORAGE_KEY = "dreamina_api_config";
 
 // ─── 世界选择页 ───
 function WorldSelectScreen({ onSelect }) {
@@ -246,7 +246,7 @@ function DialogueStream({ dialogues, npcs }) {
 }
 
 // ─── 主模拟界面 ───
-function SimulationScreen({ template, apiKey, onBack }) {
+function SimulationScreen({ template, apiConfig, onBack }) {
   const [npcs, setNpcs] = useState(() =>
     template.npcs.map((n) => ({
       ...n,
@@ -271,7 +271,7 @@ function SimulationScreen({ template, apiKey, onBack }) {
     setIsBusy(true);
     setError(null);
     try {
-      const result = await simulateTick(apiKey, template, npcs, tick, pendingIntervention);
+      const result = await simulateTick(apiConfig, template, npcs, tick, pendingIntervention);
       const updatedNpcs = applyResult(npcs, result);
       setNpcs(updatedNpcs);
 
@@ -298,7 +298,7 @@ function SimulationScreen({ template, apiKey, onBack }) {
     } finally {
       setIsBusy(false);
     }
-  }, [apiKey, template, npcs, tick, pendingIntervention, isBusy]);
+  }, [apiConfig, template, npcs, tick, pendingIntervention, isBusy]);
 
   // 自动模式
   useEffect(() => {
@@ -459,40 +459,79 @@ function SimulationScreen({ template, apiKey, onBack }) {
   );
 }
 
-// ─── API Key 设置面板 ───
-function ApiKeyBanner({ apiKey, onChange }) {
-  const [show, setShow] = useState(false);
+// ─── API 设置页面 ───
+function ApiSetupScreen({ config, onSave }) {
+  const [apiKey, setApiKey] = useState(config.apiKey || "");
+  const [baseUrl, setBaseUrl] = useState(
+    config.baseUrl || "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+  );
+  const [model, setModel] = useState(config.model || "");
+
+  const canSave = apiKey.trim() && model.trim();
+
   return (
-    <div className="fixed top-2 right-2 z-50 flex items-center gap-2">
-      {show ? (
-        <div className="bg-card border border-border rounded-lg p-3 flex items-center gap-2 shadow-lg animate-fade-in">
+    <div className="flex flex-col items-center justify-center min-h-screen p-8">
+      <div className="text-5xl mb-4">🌌</div>
+      <h1 className="text-2xl font-bold text-accent mb-2">创世模拟器</h1>
+      <p className="text-text-dim mb-8 text-sm">首次使用需要配置 API 连接</p>
+
+      <div className="bg-card border border-border rounded-xl p-6 w-full max-w-md space-y-4">
+        <div>
+          <label className="text-xs text-text-dim block mb-1">API Key *</label>
           <input
             type="password"
             value={apiKey}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="sk-ant-..."
-            className="bg-bg border border-border rounded px-3 py-1 text-sm w-64 focus:border-accent outline-none"
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="你的 API 密钥"
+            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:border-accent outline-none"
           />
-          <button
-            onClick={() => setShow(false)}
-            className="text-text-dim hover:text-accent text-sm cursor-pointer"
-          >
-            ✓
-          </button>
         </div>
-      ) : (
+
+        <div>
+          <label className="text-xs text-text-dim block mb-1">模型 / 接入点 ID *</label>
+          <input
+            type="text"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="如 ep-20250xxx 或 doubao-1-5-pro-32k"
+            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:border-accent outline-none"
+          />
+          <p className="text-xs text-text-dim mt-1">火山引擎控制台 → 模型推理 → 接入点管理中获取</p>
+        </div>
+
+        <div>
+          <label className="text-xs text-text-dim block mb-1">API 地址</label>
+          <input
+            type="text"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder="https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:border-accent outline-none font-mono text-xs"
+          />
+          <p className="text-xs text-text-dim mt-1">默认为火山引擎 ARK，也兼容其他 OpenAI 格式 API</p>
+        </div>
+
         <button
-          onClick={() => setShow(true)}
-          className={`px-3 py-1 rounded-lg text-xs border cursor-pointer transition-all ${
-            apiKey
-              ? "bg-card border-border text-text-dim hover:border-accent"
-              : "bg-accent/20 border-accent text-accent animate-pulse-glow"
-          }`}
+          onClick={() => canSave && onSave({ apiKey: apiKey.trim(), baseUrl: baseUrl.trim(), model: model.trim() })}
+          disabled={!canSave}
+          className="w-full bg-accent/20 border border-accent text-accent py-2 rounded-lg text-sm hover:bg-accent/30 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          🔑 {apiKey ? "API Key 已设置" : "设置 API Key"}
+          保存并进入
         </button>
-      )}
+      </div>
     </div>
+  );
+}
+
+// ─── 设置按钮（浮在右上角）───
+function SettingsButton({ onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="fixed top-2 right-2 z-50 px-3 py-1 rounded-lg text-xs border bg-card border-border text-text-dim hover:border-accent hover:text-accent cursor-pointer transition-all"
+    >
+      ⚙️ API 设置
+    </button>
   );
 }
 
@@ -500,19 +539,37 @@ function ApiKeyBanner({ apiKey, onChange }) {
 export default function App() {
   const [phase, setPhase] = useState("select");
   const [template, setTemplate] = useState(null);
-  const [apiKey, setApiKey] = useState(() => {
-    try { return localStorage.getItem(API_KEY_STORAGE_KEY) || ""; } catch { return ""; }
+  const [apiConfig, setApiConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
   });
 
-  const handleApiKeyChange = (key) => {
-    setApiKey(key);
-    try { localStorage.setItem(API_KEY_STORAGE_KEY, key); } catch {}
+  const isConfigured = apiConfig.apiKey && apiConfig.model;
+
+  const handleSaveConfig = (config) => {
+    setApiConfig(config);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch {}
   };
+
+  // 没配置 → 强制进入设置页
+  if (!isConfigured || phase === "setup") {
+    return (
+      <ApiSetupScreen
+        config={apiConfig}
+        onSave={(config) => {
+          handleSaveConfig(config);
+          setPhase("select");
+        }}
+      />
+    );
+  }
 
   if (phase === "select") {
     return (
       <>
-        <ApiKeyBanner apiKey={apiKey} onChange={handleApiKeyChange} />
+        <SettingsButton onClick={() => setPhase("setup")} />
         <WorldSelectScreen
           onSelect={(t) => {
             setTemplate(t);
@@ -525,11 +582,11 @@ export default function App() {
 
   return (
     <>
-      <ApiKeyBanner apiKey={apiKey} onChange={handleApiKeyChange} />
+      <SettingsButton onClick={() => setPhase("setup")} />
       <SimulationScreen
         key={template.id}
         template={template}
-        apiKey={apiKey}
+        apiConfig={apiConfig}
         onBack={() => {
           setTemplate(null);
           setPhase("select");

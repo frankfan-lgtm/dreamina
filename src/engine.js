@@ -94,11 +94,17 @@ export function buildPrompt(template, npcs, tick, pendingIntervention) {
   return prompt;
 }
 
-export async function callClaude(apiKey, systemPrompt, userPrompt) {
+export async function callClaude(apiConfig, systemPrompt, userPrompt) {
   const res = await fetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ systemPrompt, userPrompt, apiKey }),
+    body: JSON.stringify({
+      systemPrompt,
+      userPrompt,
+      apiKey: apiConfig.apiKey,
+      baseUrl: apiConfig.baseUrl,
+      model: apiConfig.model,
+    }),
   });
 
   if (!res.ok) {
@@ -121,9 +127,9 @@ export function parseResponse(text) {
   return JSON.parse(cleaned);
 }
 
-export async function simulateTick(apiKey, template, npcs, tick, pendingIntervention) {
+export async function simulateTick(apiConfig, template, npcs, tick, pendingIntervention) {
   const userPrompt = buildPrompt(template, npcs, tick, pendingIntervention);
-  const rawText = await callClaude(apiKey, SYSTEM_PROMPT, userPrompt);
+  const rawText = await callClaude(apiConfig, SYSTEM_PROMPT, userPrompt);
   const result = parseResponse(rawText);
   return result;
 }
