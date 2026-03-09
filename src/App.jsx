@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { WORLD_CONFIG, NPCS, INITIAL_RELATIONSHIPS, SCHEDULE_TEMPLATE } from "./world.js";
+import { WORLD_CONFIG, NPCS, INITIAL_RELATIONSHIPS, SCHEDULE_TEMPLATE, NPC_STATIONS } from "./world.js";
 import { simulateTick, applyResult, chatWithNPC } from "./engine.js";
 
 // ─── 工具函数 ───
@@ -71,39 +71,45 @@ const FEMALE_BODY = [ // 长发女性 12x18
 ];
 
 const SPRITE_COLORS = {
-  zhangwei: { // 程序员 - 蓝色卫衣
-    H: "#2a2a4a", h: "#404060", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#4488cc", t: "#3366aa", P: "#2a3a5a", p: "#1a2a40", B: "#223050",
-    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
-    body: "male",
-  },
-  linting: { // PM - 红色衬衫
-    H: "#5a2020", h: "#7a3535", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#cc4444", t: "#aa3333", P: "#4a3050", p: "#3a2040", B: "#3a2040",
+  kelly: { // Kelly - 优雅深紫色西装外套，大女主
+    H: "#2a1520", h: "#3a2530", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#5a3868", t: "#4a2858", P: "#2a2038", p: "#1a1028", B: "#3a2848",
     E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "female",
   },
-  zhaopeng: { // 领导 - 深色西装
-    H: "#1a1a28", h: "#28283a", S: "#e8c098", s: "#d0a880", M: "#d09878",
-    T: "#2a2a3a", t: "#1a1a28", P: "#1a1a28", p: "#101018", B: "#4a4040",
-    E: "#12101a", W: "#e8e8e0", A: "#e8c098",
+  pine: { // 🌲 - 森林绿polo衫，年轻leader
+    H: "#1a1a28", h: "#28283a", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#2a6a48", t: "#1a5a38", P: "#2a3040", p: "#1a2030", B: "#223038",
+    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "male",
   },
-  liufang: { // 新人 - 绿色T恤
-    H: "#5a3828", h: "#7a4838", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#50a860", t: "#408848", P: "#3a4a5a", p: "#2a3a4a", B: "#304048",
+  frank: { // Frank - 时尚蓝色夹克，摄影达人
+    H: "#2a2035", h: "#3a3048", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#3a6a9a", t: "#2a5a8a", P: "#2a2a3a", p: "#1a1a2a", B: "#2a3848",
+    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
+    body: "male",
+  },
+  benzema: { // Benzema - 黑灰科技风卫衣
+    H: "#1a1a1a", h: "#2a2a2a", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#3a3a42", t: "#2a2a32", P: "#1a1a22", p: "#121218", B: "#2a2a30",
+    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
+    body: "male",
+  },
+  yanfei: { // 陈妍霏 - 活力珊瑚橙，女汉子
+    H: "#2a1818", h: "#3a2828", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#d06848", t: "#b05838", P: "#3a3048", p: "#2a2038", B: "#2a2838",
     E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "female",
   },
-  chenxi: { // 设计师 - 紫色连帽衫
-    H: "#3a2a42", h: "#4a3a55", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#8060b0", t: "#604890", P: "#3a3050", p: "#2a2040", B: "#2a2838",
+  haoran: { // 张浩然 - 卡其色休闲衬衫，稳重奶爸
+    H: "#2a2020", h: "#3a3030", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#8a7a60", t: "#7a6a50", P: "#3a3a42", p: "#2a2a32", B: "#4a4038",
     E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "male",
   },
-  wangli: { // HR - 橙色针织衫
-    H: "#6a3820", h: "#8a5030", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#c08850", t: "#a07040", P: "#4a3a50", p: "#3a2a40", B: "#3a2838",
+  xinyi: { // 查心怡 - 淡蓝紫色针织衫，安静温柔
+    H: "#3a2838", h: "#4a3848", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#7080a8", t: "#607098", P: "#3a3048", p: "#2a2038", B: "#2a2838",
     E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "female",
   },
@@ -297,7 +303,7 @@ function drawRoomFurniture(ctx, x, y, w, h, roomId, isZoomed) {
   }
 }
 
-// 工位区：电脑桌椅排列
+// 工位区：电脑桌椅排列（即梦产品团队工位）
 function drawDeskRoom(ctx, x, y, w, h, s) {
   const deskW = 28*s, deskH = 16*s, gap = 8*s;
   const rows = Math.max(1, Math.floor((h - 30*s) / (deskH + gap + 12*s)));
@@ -309,318 +315,533 @@ function drawDeskRoom(ctx, x, y, w, h, s) {
     for (let c = 0; c < cols; c++) {
       const dx = startX + c * (deskW + gap);
       const dy = startY + r * (deskH + gap + 12*s);
-      // 桌面
-      ctx.fillStyle = '#5a4a38';
+      // 桌面（白色现代办公桌）
+      ctx.fillStyle = '#d8d0c8';
       ctx.fillRect(dx, dy, deskW, deskH);
-      ctx.fillStyle = '#4a3a28';
-      ctx.fillRect(dx+1*s, dy+1*s, deskW-2*s, 2*s); // 桌面高光
-      // 显示器（俯视图 = 薄长条）
-      ctx.fillStyle = '#1a1a2a';
-      ctx.fillRect(dx + 3*s, dy + 2*s, 14*s, 3*s);
-      ctx.fillStyle = '#3a5a8a';
-      ctx.fillRect(dx + 4*s, dy + 2*s, 12*s, 2*s); // 屏幕光
-      // 键盘
-      ctx.fillStyle = '#2a2a3a';
-      ctx.fillRect(dx + 4*s, dy + 7*s, 10*s, 4*s);
+      ctx.fillStyle = '#e8e0d8';
+      ctx.fillRect(dx+1*s, dy+1*s, deskW-2*s, deskH-2*s);
+      ctx.fillStyle = '#c8c0b8';
+      ctx.fillRect(dx, dy+deskH-1*s, deskW, 1*s); // 桌面阴影
+      // 显示器（Mac风格）
+      ctx.fillStyle = '#c0c0c8';
+      ctx.fillRect(dx + 8*s, dy + 1*s, 2*s, 2*s); // 支架
+      ctx.fillStyle = '#2a2a32';
+      ctx.fillRect(dx + 3*s, dy + 1*s, 14*s, 3*s); // 屏幕边框
+      ctx.fillStyle = '#4a7aaa';
+      ctx.fillRect(dx + 4*s, dy + 1*s, 12*s, 2*s); // 屏幕光（蓝色）
+      // 键盘（浅灰色）
+      ctx.fillStyle = '#c8c8d0';
+      ctx.fillRect(dx + 4*s, dy + 7*s, 10*s, 3*s);
+      ctx.fillStyle = '#d8d8e0';
+      ctx.fillRect(dx + 5*s, dy + 7*s, 8*s, 2*s);
       // 鼠标
-      ctx.fillStyle = '#3a3a4a';
-      ctx.fillRect(dx + 16*s, dy + 8*s, 3*s, 4*s);
-      // 椅子（桌下方）
-      ctx.fillStyle = '#3a3a4a';
+      ctx.fillStyle = '#c0c0c8';
+      ctx.fillRect(dx + 16*s, dy + 8*s, 3*s, 3*s);
+      // 咖啡杯
+      ctx.fillStyle = '#e8e0d0';
+      ctx.fillRect(dx + 21*s, dy + 3*s, 3*s, 3*s);
+      ctx.fillStyle = '#8a6a4a';
+      ctx.fillRect(dx + 22*s, dy + 4*s, 1*s, 1*s); // 咖啡
+      // 椅子（深灰色人体工学椅）
+      ctx.fillStyle = '#4a4a52';
       ctx.fillRect(dx + 7*s, dy + deskH + 1*s, 12*s, 8*s);
-      ctx.fillStyle = '#2a2a38';
+      ctx.fillStyle = '#3a3a42';
       ctx.fillRect(dx + 9*s, dy + deskH + 2*s, 8*s, 6*s);
-      // 椅子轮子小点
-      ctx.fillStyle = '#222230';
-      ctx.fillRect(dx + 8*s, dy + deskH + 8*s, 2*s, 2*s);
-      ctx.fillRect(dx + 18*s, dy + deskH + 8*s, 2*s, 2*s);
+      // 椅子轮子
+      ctx.fillStyle = '#2a2a30';
+      ctx.fillRect(dx + 7*s, dy + deskH + 8*s, 2*s, 2*s);
+      ctx.fillRect(dx + 17*s, dy + deskH + 8*s, 2*s, 2*s);
+      ctx.fillRect(dx + 12*s, dy + deskH + 9*s, 2*s, 1*s);
     }
   }
 
-  // 绿植装饰（角落）
-  ctx.fillStyle = '#2a4a2a';
-  ctx.fillRect(x + w - 14*s, y + h - 14*s, 10*s, 10*s);
-  ctx.fillStyle = '#3a6a3a';
-  ctx.fillRect(x + w - 12*s, y + h - 12*s, 6*s, 6*s);
+  // 墙上白板（上方）
+  ctx.fillStyle = '#e8e4e0';
+  ctx.fillRect(x + 6*s, y + 4*s, Math.min(30*s, w*0.3), 10*s);
+  ctx.fillStyle = '#d0ccc8';
+  ctx.fillRect(x + 7*s, y + 5*s, Math.min(28*s, w*0.3-2*s), 8*s);
+  // 白板上的便利贴
+  ctx.fillStyle = '#f0e068';
+  ctx.fillRect(x + 8*s, y + 6*s, 4*s, 3*s);
+  ctx.fillStyle = '#68c0f0';
+  ctx.fillRect(x + 14*s, y + 6*s, 4*s, 3*s);
+  ctx.fillStyle = '#f08888';
+  ctx.fillRect(x + 20*s, y + 7*s, 4*s, 3*s);
+  ctx.fillStyle = '#88e088';
+  ctx.fillRect(x + 11*s, y + 10*s, 4*s, 2*s);
+
+  // 绿植（角落大盆栽）
+  ctx.fillStyle = '#6a4a38';
+  ctx.fillRect(x + w - 10*s, y + h - 8*s, 6*s, 5*s); // 花盆
+  ctx.fillStyle = '#2a6a2a';
+  ctx.fillRect(x + w - 12*s, y + h - 14*s, 10*s, 8*s);
+  ctx.fillStyle = '#3a8a3a';
+  ctx.fillRect(x + w - 10*s, y + h - 12*s, 6*s, 5*s);
+  ctx.fillStyle = '#4aaa4a';
+  ctx.fillRect(x + w - 9*s, y + h - 10*s, 3*s, 3*s);
+
+  // 右上角小植物
   ctx.fillStyle = '#5a3a28';
-  ctx.fillRect(x + w - 10*s, y + h - 6*s, 4*s, 4*s); // 花盆
+  ctx.fillRect(x + w - 8*s, y + 8*s, 4*s, 3*s);
+  ctx.fillStyle = '#3a7a3a';
+  ctx.fillRect(x + w - 9*s, y + 5*s, 6*s, 5*s);
+
+  // 墙上装饰（即梦logo区域）
+  ctx.fillStyle = '#3a3858';
+  ctx.fillRect(x + w*0.55, y + 4*s, 14*s, 8*s);
+  ctx.fillStyle = '#c08850';
+  ctx.font = `${Math.max(4, 3*s)}px monospace`;
+  ctx.fillText('✨即梦', x + w*0.55 + 2*s, y + 5*s + 4*s);
 }
 
-// 会议室：长桌 + 白板
+// 会议室：长桌 + 白板 + 投影
 function drawMeetingRoom(ctx, x, y, w, h, s) {
-  // 长会议桌
+  // 长会议桌（白色现代风）
   const tw = Math.min(w * 0.6, 80*s);
-  const th = Math.min(h * 0.35, 40*s);
+  const th = Math.min(h * 0.3, 36*s);
   const tx = x + (w - tw) / 2;
-  const ty = y + (h - th) / 2 + 4*s;
-  ctx.fillStyle = '#5a4838';
+  const ty = y + (h - th) / 2 + 6*s;
+  ctx.fillStyle = '#c8c0b8';
   ctx.fillRect(tx, ty, tw, th);
-  ctx.fillStyle = '#6a5848';
-  ctx.fillRect(tx + 2*s, ty + 2*s, tw - 4*s, th - 4*s); // 桌面亮面
-  // 桌腿
-  ctx.fillStyle = '#3a2a1a';
-  ctx.fillRect(tx + 2*s, ty + 2*s, 3*s, 3*s);
-  ctx.fillRect(tx + tw - 5*s, ty + 2*s, 3*s, 3*s);
-  ctx.fillRect(tx + 2*s, ty + th - 5*s, 3*s, 3*s);
-  ctx.fillRect(tx + tw - 5*s, ty + th - 5*s, 3*s, 3*s);
+  ctx.fillStyle = '#d8d0c8';
+  ctx.fillRect(tx + 2*s, ty + 2*s, tw - 4*s, th - 4*s);
+  // 桌腿（细金属腿）
+  ctx.fillStyle = '#808088';
+  ctx.fillRect(tx + 3*s, ty + 3*s, 2*s, 2*s);
+  ctx.fillRect(tx + tw - 5*s, ty + 3*s, 2*s, 2*s);
+  ctx.fillRect(tx + 3*s, ty + th - 5*s, 2*s, 2*s);
+  ctx.fillRect(tx + tw - 5*s, ty + th - 5*s, 2*s, 2*s);
+  // 桌上笔记本/文件
+  ctx.fillStyle = '#e8e0d0';
+  ctx.fillRect(tx + 8*s, ty + 5*s, 5*s, 4*s);
+  ctx.fillStyle = '#68a0d0';
+  ctx.fillRect(tx + tw - 16*s, ty + 6*s, 4*s, 3*s);
+  // 桌上水杯
+  ctx.fillStyle = '#e0e8f0';
+  ctx.fillRect(tx + tw/2 - 1*s, ty + th/2 - 1*s, 2*s, 2*s);
 
   // 椅子围绕桌子
   const chairS = 6*s;
   const chairCount = Math.max(2, Math.floor(tw / (chairS + 6*s)));
   for (let i = 0; i < chairCount; i++) {
     const cx = tx + 4*s + i * (tw - 8*s) / Math.max(1, chairCount - 1) - chairS/2;
-    // 上方椅子
-    ctx.fillStyle = '#3a3a4a';
+    ctx.fillStyle = '#4a4a52';
     ctx.fillRect(cx, ty - chairS - 3*s, chairS, chairS);
-    ctx.fillStyle = '#4a4a5a';
+    ctx.fillStyle = '#5a5a62';
     ctx.fillRect(cx + 1*s, ty - chairS - 2*s, chairS - 2*s, chairS - 2*s);
-    // 下方椅子
-    ctx.fillStyle = '#3a3a4a';
+    ctx.fillStyle = '#4a4a52';
     ctx.fillRect(cx, ty + th + 3*s, chairS, chairS);
-    ctx.fillStyle = '#4a4a5a';
+    ctx.fillStyle = '#5a5a62';
     ctx.fillRect(cx + 1*s, ty + th + 4*s, chairS - 2*s, chairS - 2*s);
   }
 
-  // 白板（上方墙壁）
-  ctx.fillStyle = '#e8e0d8';
-  ctx.fillRect(x + w * 0.25, y + 6*s, w * 0.5, 12*s);
-  ctx.fillStyle = '#d0c8c0';
-  ctx.fillRect(x + w * 0.25 + 2*s, y + 8*s, w * 0.5 - 4*s, 8*s);
-  // 白板上的文字线条
-  ctx.fillStyle = '#a0a0b0';
-  for (let i = 0; i < 3; i++) {
-    ctx.fillRect(x + w * 0.3, y + 9*s + i * 3*s, w * 0.25 - i * 6*s, 1*s);
-  }
+  // 大白板（上方墙壁，带彩色内容）
+  ctx.fillStyle = '#f0ece8';
+  ctx.fillRect(x + w * 0.2, y + 4*s, w * 0.6, 14*s);
+  ctx.fillStyle = '#e8e4e0';
+  ctx.fillRect(x + w * 0.2 + 2*s, y + 6*s, w * 0.6 - 4*s, 10*s);
+  // 白板上的线条和便利贴
+  ctx.fillStyle = '#4a8ab0';
+  ctx.fillRect(x + w*0.25, y + 7*s, w*0.15, 1*s);
+  ctx.fillRect(x + w*0.25, y + 10*s, w*0.1, 1*s);
+  ctx.fillStyle = '#f0e068';
+  ctx.fillRect(x + w*0.5, y + 7*s, 4*s, 3*s);
+  ctx.fillStyle = '#f09068';
+  ctx.fillRect(x + w*0.5 + 5*s, y + 7*s, 4*s, 3*s);
+  ctx.fillStyle = '#68d090';
+  ctx.fillRect(x + w*0.5 + 2*s, y + 11*s, 4*s, 2*s);
 
-  // 投影仪（顶部中央小方块）
-  ctx.fillStyle = '#2a2a3a';
-  ctx.fillRect(x + w/2 - 4*s, y + 2*s, 8*s, 4*s);
+  // 投影仪
+  ctx.fillStyle = '#2a2a32';
+  ctx.fillRect(x + w/2 - 4*s, y + 1*s, 8*s, 3*s);
+  ctx.fillStyle = '#4a80b0';
+  ctx.fillRect(x + w/2 - 1*s, y + 2*s, 2*s, 1*s); // 投影灯
+
+  // 角落绿植
+  ctx.fillStyle = '#5a3a28';
+  ctx.fillRect(x + 4*s, y + h - 8*s, 4*s, 4*s);
+  ctx.fillStyle = '#3a7a3a';
+  ctx.fillRect(x + 3*s, y + h - 12*s, 6*s, 6*s);
+  ctx.fillStyle = '#4a9a4a';
+  ctx.fillRect(x + 4*s, y + h - 10*s, 3*s, 3*s);
+
+  // 右下角立式台灯
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(x + w - 6*s, y + h - 14*s, 1*s, 10*s);
+  ctx.fillStyle = '#c8c0b0';
+  ctx.fillRect(x + w - 8*s, y + h - 16*s, 5*s, 3*s);
 }
 
-// 茶水间：咖啡机 + 吧台 + 冰箱
+// 茶水间：咖啡机 + 吧台 + 冰箱 + 小沙发
 function drawPantryRoom(ctx, x, y, w, h, s) {
-  // 吧台/料理台（上方）
-  ctx.fillStyle = '#5a5048';
+  // 吧台/料理台（上方，大理石纹理）
+  ctx.fillStyle = '#d0c8c0';
   ctx.fillRect(x + 6*s, y + 6*s, w - 12*s, 12*s);
-  ctx.fillStyle = '#6a6058';
-  ctx.fillRect(x + 8*s, y + 7*s, w - 16*s, 10*s);
+  ctx.fillStyle = '#e0d8d0';
+  ctx.fillRect(x + 7*s, y + 7*s, w - 14*s, 10*s);
+  // 大理石纹理
+  ctx.fillStyle = '#c8c0b8';
+  ctx.fillRect(x + 12*s, y + 9*s, 8*s, 1*s);
+  ctx.fillRect(x + 30*s, y + 11*s, 6*s, 1*s);
 
-  // 咖啡机
+  // 咖啡机（精致款）
   ctx.fillStyle = '#2a2a2a';
-  ctx.fillRect(x + 10*s, y + 7*s, 8*s, 8*s);
-  ctx.fillStyle = '#8a4a2a';
-  ctx.fillRect(x + 12*s, y + 8*s, 4*s, 3*s); // 咖啡色
-  ctx.fillStyle = '#aa2222';
-  ctx.fillRect(x + 11*s, y + 12*s, 2*s, 2*s); // 按钮
+  ctx.fillRect(x + 8*s, y + 7*s, 8*s, 8*s);
+  ctx.fillStyle = '#4a4a4a';
+  ctx.fillRect(x + 9*s, y + 7*s, 6*s, 2*s);
+  ctx.fillStyle = '#8a5a2a';
+  ctx.fillRect(x + 10*s, y + 10*s, 4*s, 2*s);
+  ctx.fillStyle = '#dd3030';
+  ctx.fillRect(x + 9*s, y + 13*s, 2*s, 1*s); // 红灯
 
   // 水壶
-  ctx.fillStyle = '#c0c0d0';
-  ctx.fillRect(x + 22*s, y + 8*s, 6*s, 6*s);
   ctx.fillStyle = '#e0e0e8';
-  ctx.fillRect(x + 23*s, y + 9*s, 4*s, 4*s);
+  ctx.fillRect(x + 20*s, y + 8*s, 5*s, 5*s);
+  ctx.fillStyle = '#c8c8d0';
+  ctx.fillRect(x + 25*s, y + 9*s, 1*s, 2*s); // 壶嘴
 
-  // 微波炉
-  ctx.fillStyle = '#3a3a3a';
-  ctx.fillRect(x + w - 22*s, y + 7*s, 12*s, 8*s);
-  ctx.fillStyle = '#1a3a4a';
-  ctx.fillRect(x + w - 20*s, y + 8*s, 7*s, 6*s);
+  // 零食区
+  ctx.fillStyle = '#e8c860';
+  ctx.fillRect(x + w - 20*s, y + 8*s, 4*s, 3*s); // 饼干盒
+  ctx.fillStyle = '#d04040';
+  ctx.fillRect(x + w - 14*s, y + 8*s, 3*s, 4*s); // 薯片
+  ctx.fillStyle = '#40a060';
+  ctx.fillRect(x + w - 10*s, y + 9*s, 2*s, 3*s); // 茶包
 
-  // 冰箱（右下）
+  // 冰箱（左下，银色）
   ctx.fillStyle = '#c0c8d0';
-  ctx.fillRect(x + w - 16*s, y + h - 22*s, 12*s, 18*s);
-  ctx.fillStyle = '#b0b8c0';
-  ctx.fillRect(x + w - 14*s, y + h - 20*s, 8*s, 7*s);
-  ctx.fillStyle = '#a0a8b0';
-  ctx.fillRect(x + w - 14*s, y + h - 12*s, 8*s, 7*s);
-  // 冰箱把手
-  ctx.fillStyle = '#808890';
-  ctx.fillRect(x + w - 6*s, y + h - 18*s, 2*s, 4*s);
-  ctx.fillRect(x + w - 6*s, y + h - 10*s, 2*s, 4*s);
+  ctx.fillRect(x + 4*s, y + h - 20*s, 10*s, 16*s);
+  ctx.fillStyle = '#d0d8e0';
+  ctx.fillRect(x + 5*s, y + h - 19*s, 8*s, 6*s);
+  ctx.fillStyle = '#b8c0c8';
+  ctx.fillRect(x + 5*s, y + h - 12*s, 8*s, 7*s);
+  ctx.fillStyle = '#909898';
+  ctx.fillRect(x + 12*s, y + h - 17*s, 1*s, 3*s);
+  ctx.fillRect(x + 12*s, y + h - 10*s, 1*s, 3*s);
 
-  // 圆桌（中央）
-  ctx.fillStyle = '#5a4a38';
+  // 圆桌（中央，木质）
   const cx2 = x + w/2, cy2 = y + h/2 + 4*s;
-  ctx.beginPath();
-  ctx.arc(cx2, cy2, 10*s, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle = '#6a5a48';
-  ctx.beginPath();
-  ctx.arc(cx2, cy2, 8*s, 0, Math.PI*2);
-  ctx.fill();
+  ctx.fillStyle = '#7a6a58';
+  ctx.beginPath(); ctx.arc(cx2, cy2, 10*s, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#8a7a68';
+  ctx.beginPath(); ctx.arc(cx2, cy2, 8*s, 0, Math.PI*2); ctx.fill();
+  // 杯子和杂志
+  ctx.fillStyle = '#e8e0d0';
+  ctx.fillRect(cx2 - 4*s, cy2 - 2*s, 3*s, 3*s);
+  ctx.fillStyle = '#88c0e0';
+  ctx.fillRect(cx2 + 2*s, cy2 - 1*s, 2*s, 2*s);
+  ctx.fillStyle = '#e0d0c0';
+  ctx.fillRect(cx2 - 1*s, cy2 + 2*s, 4*s, 3*s); // 杂志
 
-  // 杯子（桌上）
-  ctx.fillStyle = '#e0d8c8';
-  ctx.fillRect(cx2 - 3*s, cy2 - 2*s, 3*s, 3*s);
-  ctx.fillRect(cx2 + 2*s, cy2 + 1*s, 3*s, 3*s);
+  // 小沙发（右下）
+  ctx.fillStyle = '#6a8a7a';
+  ctx.fillRect(x + w - 18*s, y + h - 14*s, 14*s, 8*s);
+  ctx.fillStyle = '#7a9a8a';
+  ctx.fillRect(x + w - 16*s, y + h - 12*s, 10*s, 5*s);
+  // 靠垫
+  ctx.fillStyle = '#c0a880';
+  ctx.fillRect(x + w - 15*s, y + h - 11*s, 4*s, 3*s);
+
+  // 墙上海报
+  ctx.fillStyle = '#3a5868';
+  ctx.fillRect(x + w - 12*s, y + 5*s, 8*s, 6*s);
+  ctx.fillStyle = '#c08850';
+  ctx.font = `${Math.max(3, 2*s)}px monospace`;
+  ctx.fillText('☕', x + w - 10*s, y + 6*s + 3*s);
 }
 
-// 领导办公室：大桌 + 书柜 + 沙发
+// Kelly办公室：大桌 + 书柜 + 沙发 + 装饰
 function drawBossRoom(ctx, x, y, w, h, s) {
-  // 大办公桌（中上）
-  const dw = Math.min(w * 0.5, 50*s), dh = 20*s;
+  // 大办公桌（深色实木）
+  const dw = Math.min(w * 0.5, 50*s), dh = 18*s;
   const dx = x + (w - dw) / 2;
   const dy = y + 14*s;
-  ctx.fillStyle = '#5a3828';
+  ctx.fillStyle = '#5a4030';
   ctx.fillRect(dx, dy, dw, dh);
-  ctx.fillStyle = '#6a4838';
+  ctx.fillStyle = '#6a5040';
   ctx.fillRect(dx + 2*s, dy + 2*s, dw - 4*s, dh - 4*s);
+  ctx.fillStyle = '#4a3020';
+  ctx.fillRect(dx, dy + dh - 1*s, dw, 1*s);
 
-  // 显示器
-  ctx.fillStyle = '#1a1a2a';
-  ctx.fillRect(dx + dw/2 - 8*s, dy + 3*s, 16*s, 4*s);
-  ctx.fillStyle = '#3a5a8a';
-  ctx.fillRect(dx + dw/2 - 7*s, dy + 3*s, 14*s, 3*s);
+  // Mac显示器
+  ctx.fillStyle = '#c0c0c8';
+  ctx.fillRect(dx + dw/2 - 1*s, dy + 2*s, 2*s, 2*s); // 支架
+  ctx.fillStyle = '#2a2a32';
+  ctx.fillRect(dx + dw/2 - 8*s, dy + 2*s, 16*s, 4*s);
+  ctx.fillStyle = '#4a7ab0';
+  ctx.fillRect(dx + dw/2 - 7*s, dy + 2*s, 14*s, 3*s);
 
-  // 文件堆
+  // 文件和笔筒
   ctx.fillStyle = '#e8e0d0';
-  ctx.fillRect(dx + 4*s, dy + 4*s, 6*s, 8*s);
+  ctx.fillRect(dx + 4*s, dy + 4*s, 5*s, 7*s);
   ctx.fillStyle = '#d8d0c0';
-  ctx.fillRect(dx + 5*s, dy + 5*s, 5*s, 3*s);
+  ctx.fillRect(dx + 4*s, dy + 5*s, 5*s, 2*s);
+  // 笔筒
+  ctx.fillStyle = '#3a3a42';
+  ctx.fillRect(dx + dw - 8*s, dy + 5*s, 4*s, 5*s);
+  ctx.fillStyle = '#c08850';
+  ctx.fillRect(dx + dw - 7*s, dy + 3*s, 1*s, 3*s); // 笔
+  ctx.fillStyle = '#5080c0';
+  ctx.fillRect(dx + dw - 6*s, dy + 4*s, 1*s, 2*s); // 笔
 
-  // 老板椅（大椅子）
-  ctx.fillStyle = '#2a2a2a';
-  ctx.fillRect(dx + dw/2 - 8*s, dy + dh + 2*s, 16*s, 12*s);
-  ctx.fillStyle = '#3a2828';
-  ctx.fillRect(dx + dw/2 - 6*s, dy + dh + 3*s, 12*s, 10*s);
+  // 老板椅（深色皮椅）
+  ctx.fillStyle = '#3a2020';
+  ctx.fillRect(dx + dw/2 - 7*s, dy + dh + 2*s, 14*s, 10*s);
+  ctx.fillStyle = '#4a3030';
+  ctx.fillRect(dx + dw/2 - 5*s, dy + dh + 3*s, 10*s, 8*s);
+  // 椅子扶手
+  ctx.fillStyle = '#3a2020';
+  ctx.fillRect(dx + dw/2 - 8*s, dy + dh + 5*s, 2*s, 4*s);
+  ctx.fillRect(dx + dw/2 + 6*s, dy + dh + 5*s, 2*s, 4*s);
 
-  // 书柜（左墙）
-  ctx.fillStyle = '#4a3828';
+  // 书柜（左墙，精装）
+  ctx.fillStyle = '#5a4030';
   ctx.fillRect(x + 4*s, y + 6*s, 10*s, h - 12*s);
-  ctx.fillStyle = '#3a2818';
-  // 书柜隔板
+  ctx.fillStyle = '#4a3020';
   for (let i = 0; i < 4; i++) {
     const sy = y + 10*s + i * ((h - 20*s) / 4);
     ctx.fillRect(x + 4*s, sy, 10*s, 1*s);
-    // 书本
-    const bookColors = ['#8a3030','#306a8a','#6a8a30','#8a6a30'];
-    ctx.fillStyle = bookColors[i % bookColors.length];
-    ctx.fillRect(x + 5*s, sy + 2*s, 3*s, (h - 20*s) / 4 - 4*s);
-    ctx.fillStyle = bookColors[(i+1) % bookColors.length];
-    ctx.fillRect(x + 9*s, sy + 2*s, 2*s, (h - 20*s) / 4 - 4*s);
+    const bookColors = ['#a83030','#3080a8','#80a830','#a88030','#8030a8'];
+    for (let b = 0; b < 3; b++) {
+      ctx.fillStyle = bookColors[(i*3+b) % bookColors.length];
+      ctx.fillRect(x + 5*s + b*3*s, sy + 1*s, 2*s, (h - 20*s) / 4 - 3*s);
+    }
   }
 
-  // 来访沙发（右下）
-  ctx.fillStyle = '#3a3a4a';
+  // 来访沙发（右下，深绿色高档沙发）
+  ctx.fillStyle = '#3a5a4a';
   ctx.fillRect(x + w - 20*s, y + h - 16*s, 16*s, 10*s);
-  ctx.fillStyle = '#4a4a5a';
+  ctx.fillStyle = '#4a6a5a';
   ctx.fillRect(x + w - 18*s, y + h - 14*s, 12*s, 6*s);
+  // 茶几
+  ctx.fillStyle = '#5a4a38';
+  ctx.fillRect(x + w - 24*s, y + h - 12*s, 6*s, 4*s);
+  ctx.fillStyle = '#6a5a48';
+  ctx.fillRect(x + w - 23*s, y + h - 11*s, 4*s, 2*s);
 
-  // 绿植
-  ctx.fillStyle = '#2a5a2a';
-  ctx.fillRect(x + w - 12*s, y + 8*s, 8*s, 8*s);
-  ctx.fillStyle = '#3a7a3a';
-  ctx.fillRect(x + w - 10*s, y + 10*s, 4*s, 4*s);
+  // 绿植（大型落地植物）
+  ctx.fillStyle = '#6a4a30';
+  ctx.fillRect(x + w - 10*s, y + 10*s, 5*s, 5*s);
+  ctx.fillStyle = '#2a7a2a';
+  ctx.fillRect(x + w - 12*s, y + 5*s, 9*s, 8*s);
+  ctx.fillStyle = '#3a9a3a';
+  ctx.fillRect(x + w - 10*s, y + 6*s, 5*s, 5*s);
+
+  // 墙上标语
+  ctx.fillStyle = '#e8e0d8';
+  ctx.fillRect(x + w*0.3, y + 4*s, w*0.4, 6*s);
+  ctx.fillStyle = '#c08850';
+  ctx.font = `${Math.max(4, 3*s)}px monospace`;
+  ctx.fillText('让想象力自由', x + w*0.3 + 2*s, y + 5*s + 3*s);
+
+  // 地毯
+  ctx.fillStyle = 'rgba(100,70,50,0.12)';
+  ctx.fillRect(x + w*0.2, y + h*0.4, w*0.6, h*0.35);
 }
 
 // 食堂：餐桌 + 餐盘 + 打饭台
 function drawCanteenRoom(ctx, x, y, w, h, s) {
-  // 打饭台（上方）
-  ctx.fillStyle = '#707068';
-  ctx.fillRect(x + 6*s, y + 6*s, w - 12*s, 10*s);
-  ctx.fillStyle = '#808078';
-  ctx.fillRect(x + 8*s, y + 7*s, w - 16*s, 8*s);
-  // 菜盆
+  // 打饭台（上方，不锈钢风格）
+  ctx.fillStyle = '#a0a098';
+  ctx.fillRect(x + 6*s, y + 5*s, w - 12*s, 10*s);
+  ctx.fillStyle = '#b0b0a8';
+  ctx.fillRect(x + 7*s, y + 6*s, w - 14*s, 8*s);
+  // 菜盆（更丰富的颜色）
   const dishes = ['#cc6633','#66aa44','#ddaa33','#aa4433','#44aa88'];
-  const dw2 = Math.min(10*s, (w - 24*s) / dishes.length);
+  const dw2 = Math.min(8*s, (w - 24*s) / dishes.length);
   for (let i = 0; i < dishes.length; i++) {
-    const dx = x + 12*s + i * (dw2 + 2*s);
-    ctx.fillStyle = '#c0c0b0';
-    ctx.fillRect(dx, y + 8*s, dw2, 5*s);
+    const dx = x + 10*s + i * (dw2 + 2*s);
+    ctx.fillStyle = '#d8d8d0';
+    ctx.fillRect(dx, y + 7*s, dw2, 4*s);
     ctx.fillStyle = dishes[i];
-    ctx.fillRect(dx + 1*s, y + 9*s, dw2 - 2*s, 3*s);
+    ctx.fillRect(dx + 1*s, y + 8*s, dw2 - 2*s, 2*s);
   }
+  // 打饭台上方的灯
+  ctx.fillStyle = '#f0e870';
+  ctx.fillRect(x + w/2 - 2*s, y + 2*s, 4*s, 2*s);
 
-  // 餐桌（2-3排）
-  const tableRows = Math.max(1, Math.floor((h - 30*s) / (24*s)));
-  const tableCols = Math.max(1, Math.floor((w - 16*s) / (36*s)));
+  // 餐桌
+  const tableRows = Math.max(1, Math.floor((h - 28*s) / (22*s)));
+  const tableCols = Math.max(1, Math.floor((w - 14*s) / (34*s)));
   for (let r = 0; r < tableRows; r++) {
     for (let c = 0; c < tableCols; c++) {
-      const tx = x + 10*s + c * 36*s;
-      const ty = y + 22*s + r * 24*s;
-      // 桌子
-      ctx.fillStyle = '#6a6058';
-      ctx.fillRect(tx, ty, 28*s, 12*s);
-      ctx.fillStyle = '#7a7068';
-      ctx.fillRect(tx + 1*s, ty + 1*s, 26*s, 10*s);
-      // 餐盘（圆形）
+      const tx = x + 8*s + c * 34*s;
+      const ty = y + 20*s + r * 22*s;
+      ctx.fillStyle = '#d0c8c0';
+      ctx.fillRect(tx, ty, 26*s, 10*s);
       ctx.fillStyle = '#e0d8d0';
-      ctx.beginPath(); ctx.arc(tx + 7*s, ty + 6*s, 3*s, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(tx + 21*s, ty + 6*s, 3*s, 0, Math.PI*2); ctx.fill();
+      ctx.fillRect(tx + 1*s, ty + 1*s, 24*s, 8*s);
+      // 餐盘
+      ctx.fillStyle = '#f0e8e0';
+      ctx.beginPath(); ctx.arc(tx + 7*s, ty + 5*s, 3*s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(tx + 19*s, ty + 5*s, 3*s, 0, Math.PI*2); ctx.fill();
       // 筷子
       ctx.fillStyle = '#8a6a40';
-      ctx.fillRect(tx + 10*s, ty + 4*s, 1*s, 5*s);
-      ctx.fillRect(tx + 12*s, ty + 4*s, 1*s, 5*s);
-      // 凳子
-      ctx.fillStyle = '#4a4a4a';
-      ctx.fillRect(tx + 3*s, ty - 5*s, 6*s, 4*s);
-      ctx.fillRect(tx + 19*s, ty - 5*s, 6*s, 4*s);
-      ctx.fillRect(tx + 3*s, ty + 13*s, 6*s, 4*s);
-      ctx.fillRect(tx + 19*s, ty + 13*s, 6*s, 4*s);
+      ctx.fillRect(tx + 10*s, ty + 3*s, 1*s, 4*s);
+      ctx.fillRect(tx + 12*s, ty + 3*s, 1*s, 4*s);
+      // 凳子（圆形）
+      ctx.fillStyle = '#5a5a5a';
+      ctx.beginPath(); ctx.arc(tx + 6*s, ty - 3*s, 3*s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(tx + 20*s, ty - 3*s, 3*s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(tx + 6*s, ty + 13*s, 3*s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(tx + 20*s, ty + 13*s, 3*s, 0, Math.PI*2); ctx.fill();
     }
   }
+
+  // 饮水机（右上角）
+  ctx.fillStyle = '#e0e0e8';
+  ctx.fillRect(x + w - 10*s, y + 6*s, 5*s, 8*s);
+  ctx.fillStyle = '#4090d0';
+  ctx.fillRect(x + w - 9*s, y + 7*s, 3*s, 3*s);
+  ctx.fillStyle = '#d04040';
+  ctx.fillRect(x + w - 8*s, y + 12*s, 1*s, 1*s); // 红灯
 }
 
-// 家：床 + 桌 + 沙发 + 电视
+// 家：床 + 桌 + 沙发 + 电视 + 温馨装饰
 function drawHomeRoom(ctx, x, y, w, h, s) {
-  // 床（左上）
-  ctx.fillStyle = '#4a3a30';
-  ctx.fillRect(x + 6*s, y + 6*s, 24*s, 30*s);
-  ctx.fillStyle = '#6888a8';
-  ctx.fillRect(x + 7*s, y + 7*s, 22*s, 6*s); // 枕头
-  ctx.fillStyle = '#7898b8';
-  ctx.fillRect(x + 8*s, y + 8*s, 9*s, 4*s);
-  ctx.fillRect(x + 19*s, y + 8*s, 9*s, 4*s);
-  ctx.fillStyle = '#5878a0';
-  ctx.fillRect(x + 7*s, y + 14*s, 22*s, 20*s); // 被子
-  ctx.fillStyle = '#4a6890';
-  ctx.fillRect(x + 9*s, y + 16*s, 18*s, 16*s);
+  // 地毯（先画，在最底层）
+  ctx.fillStyle = 'rgba(140,100,80,0.12)';
+  ctx.fillRect(x + w*0.15, y + h*0.45, w*0.7, h*0.35);
 
-  // 书桌（右上）
+  // 床（左上，温暖色调）
   ctx.fillStyle = '#5a4a38';
-  ctx.fillRect(x + w - 26*s, y + 6*s, 20*s, 12*s);
+  ctx.fillRect(x + 6*s, y + 6*s, 22*s, 28*s);
+  // 枕头（两个）
+  ctx.fillStyle = '#d0c8b8';
+  ctx.fillRect(x + 7*s, y + 7*s, 9*s, 5*s);
+  ctx.fillRect(x + 17*s, y + 7*s, 9*s, 5*s);
+  ctx.fillStyle = '#e0d8c8';
+  ctx.fillRect(x + 8*s, y + 8*s, 7*s, 3*s);
+  ctx.fillRect(x + 18*s, y + 8*s, 7*s, 3*s);
+  // 被子（暖色格纹）
+  ctx.fillStyle = '#7090b8';
+  ctx.fillRect(x + 7*s, y + 13*s, 20*s, 19*s);
+  ctx.fillStyle = '#6080a8';
+  ctx.fillRect(x + 9*s, y + 15*s, 16*s, 15*s);
+  // 格纹装饰
+  ctx.fillStyle = '#80a0c8';
+  ctx.fillRect(x + 11*s, y + 18*s, 6*s, 1*s);
+  ctx.fillRect(x + 11*s, y + 22*s, 6*s, 1*s);
+
+  // 床头柜
+  ctx.fillStyle = '#5a4a38';
+  ctx.fillRect(x + 29*s, y + 8*s, 6*s, 6*s);
   ctx.fillStyle = '#6a5a48';
-  ctx.fillRect(x + w - 24*s, y + 7*s, 16*s, 10*s);
+  ctx.fillRect(x + 30*s, y + 9*s, 4*s, 4*s);
+  // 台灯
+  ctx.fillStyle = '#c0b8a8';
+  ctx.fillRect(x + 31*s, y + 6*s, 2*s, 3*s);
+  ctx.fillStyle = '#f0e0b0';
+  ctx.fillRect(x + 30*s, y + 5*s, 4*s, 2*s); // 灯罩
+
+  // 书桌（右上，浅木色）
+  ctx.fillStyle = '#c8b8a0';
+  ctx.fillRect(x + w - 24*s, y + 6*s, 18*s, 10*s);
+  ctx.fillStyle = '#d8c8b0';
+  ctx.fillRect(x + w - 22*s, y + 7*s, 14*s, 8*s);
   // 笔记本电脑
-  ctx.fillStyle = '#2a2a3a';
-  ctx.fillRect(x + w - 22*s, y + 8*s, 10*s, 7*s);
-  ctx.fillStyle = '#3a5a7a';
-  ctx.fillRect(x + w - 21*s, y + 9*s, 8*s, 4*s);
+  ctx.fillStyle = '#c0c0c8';
+  ctx.fillRect(x + w - 20*s, y + 8*s, 10*s, 6*s);
+  ctx.fillStyle = '#3a6a9a';
+  ctx.fillRect(x + w - 19*s, y + 9*s, 8*s, 4*s);
+  // 水杯
+  ctx.fillStyle = '#e0e8f0';
+  ctx.fillRect(x + w - 9*s, y + 9*s, 2*s, 3*s);
 
-  // 沙发（下方）
-  ctx.fillStyle = '#5a4a5a';
-  ctx.fillRect(x + 8*s, y + h - 18*s, 30*s, 12*s);
-  ctx.fillStyle = '#6a5a6a';
-  ctx.fillRect(x + 10*s, y + h - 16*s, 26*s, 8*s);
+  // 沙发（下方偏左，布艺）
+  ctx.fillStyle = '#7a6878';
+  ctx.fillRect(x + 6*s, y + h - 16*s, 26*s, 10*s);
+  ctx.fillStyle = '#8a7888';
+  ctx.fillRect(x + 8*s, y + h - 14*s, 22*s, 7*s);
   // 靠垫
-  ctx.fillStyle = '#8a6a5a';
-  ctx.fillRect(x + 11*s, y + h - 15*s, 6*s, 6*s);
-  ctx.fillRect(x + 29*s, y + h - 15*s, 6*s, 6*s);
+  ctx.fillStyle = '#c0a070';
+  ctx.fillRect(x + 9*s, y + h - 13*s, 5*s, 5*s);
+  ctx.fillStyle = '#a0c0a0';
+  ctx.fillRect(x + 24*s, y + h - 13*s, 5*s, 5*s);
 
-  // 电视/茶几
-  ctx.fillStyle = '#3a3a3a';
-  ctx.fillRect(x + w - 18*s, y + h - 16*s, 14*s, 2*s);
-  ctx.fillStyle = '#1a1a2a';
-  ctx.fillRect(x + w - 16*s, y + h - 28*s, 10*s, 10*s);
-  ctx.fillStyle = '#2a4a6a';
-  ctx.fillRect(x + w - 15*s, y + h - 27*s, 8*s, 8*s);
+  // 电视（右墙）
+  ctx.fillStyle = '#1a1a22';
+  ctx.fillRect(x + w - 14*s, y + h - 26*s, 10*s, 8*s);
+  ctx.fillStyle = '#3a6a9a';
+  ctx.fillRect(x + w - 13*s, y + h - 25*s, 8*s, 6*s);
+  // 电视柜
+  ctx.fillStyle = '#5a4a38';
+  ctx.fillRect(x + w - 16*s, y + h - 17*s, 14*s, 4*s);
+  ctx.fillStyle = '#6a5a48';
+  ctx.fillRect(x + w - 15*s, y + h - 16*s, 12*s, 2*s);
 
-  // 地毯
-  ctx.fillStyle = 'rgba(120,80,80,0.2)';
-  ctx.fillRect(x + w/2 - 15*s, y + h/2, 30*s, 20*s);
+  // 拖鞋
+  ctx.fillStyle = '#d0a070';
+  ctx.fillRect(x + w/2 - 5*s, y + h - 5*s, 3*s, 2*s);
+  ctx.fillRect(x + w/2 + 1*s, y + h - 5*s, 3*s, 2*s);
 
-  // 拖鞋（门口/下方）
-  ctx.fillStyle = '#c08850';
-  ctx.fillRect(x + w/2 - 6*s, y + h - 6*s, 4*s, 3*s);
-  ctx.fillRect(x + w/2 + 2*s, y + h - 6*s, 4*s, 3*s);
+  // 窗户（上方墙中间）
+  ctx.fillStyle = '#4a6a8a';
+  ctx.fillRect(x + w*0.4, y + 2*s, w*0.2, 2*s);
+  ctx.fillStyle = '#6090b8';
+  ctx.fillRect(x + w*0.4 + 1*s, y + 2*s, w*0.2 - 2*s, 1*s);
 }
 
-// ─── NPC 移动位置系统 ───
-// 为每个NPC维护一个目标位置和当前位置，实现平滑走动
-const npcPositions = {}; // { npcId: { x, y, targetX, targetY, lastMove } }
-const NPC_MOVE_INTERVAL = 3000; // 每3秒换一个目标位置
-const NPC_MOVE_SPEED = 0.04; // 每帧移动比例
+// ─── NPC 移动位置系统（工位固定 + 偶尔走动）───
+// NPC大部分时间坐在自己的工位，只有偶尔站起来走动
+const npcPositions = {}; // { npcId: { x, y, targetX, targetY, lastMove, isIdle, stationX, stationY } }
+const NPC_IDLE_CHECK_INTERVAL = 8000; // 每8秒检查一次是否要走动
+const NPC_WANDER_CHANCE = 0.15; // 15%概率走动（大部分时间坐着）
+const NPC_WANDER_RADIUS = 30; // 走动范围（像素）
+const NPC_RETURN_CHANCE = 0.6; // 走动后60%概率回到工位
+const NPC_MOVE_SPEED = 0.03; // 平滑移动速度
 
-function getNpcPosition(npcId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, spriteH, time) {
+// 计算NPC在房间中的工位位置（固定位置）
+function getStationPosition(npcId, roomId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, spriteH, isZoomed) {
+  const station = NPC_STATIONS[npcId];
+  const margin = bw + 4;
+  const s = isZoomed ? 2 : 1;
+
+  // 如果NPC在自己的"主场"房间，分配固定工位
+  if (station && station.room === roomId) {
+    if (roomId === 'desk') {
+      // 工位区：按照seat编号分配到具体的桌子位置
+      const deskW = 28*s, deskH = 16*s, gap = 8*s;
+      const cols = Math.max(1, Math.floor((roomW - 2*margin - 16*s) / (deskW + gap)));
+      const startX = roomX + margin + (roomW - 2*margin - cols * (deskW + gap) + gap) / 2;
+      const startY = roomY + margin + labelH + 20*s;
+      const row = Math.floor(station.seat / cols);
+      const col = station.seat % cols;
+      // 坐在椅子的位置（桌子下方）
+      return {
+        x: startX + col * (deskW + gap) + deskW/2 - spriteW/2,
+        y: startY + row * (deskH + gap + 12*s) + deskH - 2*s,
+      };
+    }
+    if (roomId === 'boss') {
+      // Kelly坐在老板椅位置
+      const dw = Math.min((roomW - 2*margin) * 0.5, 50*s);
+      const dx = roomX + margin + (roomW - 2*margin - dw) / 2;
+      const dy = roomY + margin + 14*s;
+      return {
+        x: dx + dw/2 - spriteW/2,
+        y: dy + 20*s + 2*s,
+      };
+    }
+  }
+
+  // 其他情况：在房间内随机分配一个合理位置
+  const minX = roomX + margin + 8;
+  const maxX = roomX + roomW - margin - spriteW - 8;
+  const minY = roomY + margin + labelH + 8;
+  const maxY = roomY + roomH - margin - spriteH - 16;
+  // 用npcId生成一个稳定的伪随机位置
+  let hash = 0;
+  for (let i = 0; i < npcId.length; i++) hash = ((hash << 5) - hash + npcId.charCodeAt(i)) | 0;
+  const px = (Math.abs(hash) % 100) / 100;
+  const py = (Math.abs(hash * 7 + 13) % 100) / 100;
+  return {
+    x: minX + px * Math.max(1, maxX - minX),
+    y: minY + py * Math.max(1, maxY - minY),
+  };
+}
+
+function getNpcPosition(npcId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, spriteH, time, roomId, isZoomed) {
   const margin = bw + 4;
   const minX = roomX + margin + 2;
   const maxX = roomX + roomW - margin - spriteW - 2;
@@ -628,23 +849,44 @@ function getNpcPosition(npcId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, 
   const maxY = roomY + roomH - margin - spriteH - 14;
 
   if (!npcPositions[npcId]) {
+    const stationPos = getStationPosition(npcId, roomId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, spriteH, isZoomed);
     npcPositions[npcId] = {
-      x: minX + Math.random() * Math.max(1, maxX - minX),
-      y: minY + Math.random() * Math.max(1, maxY - minY),
-      targetX: 0, targetY: 0,
-      lastMove: time - Math.random() * NPC_MOVE_INTERVAL,
+      x: stationPos.x,
+      y: stationPos.y,
+      targetX: stationPos.x,
+      targetY: stationPos.y,
+      stationX: stationPos.x,
+      stationY: stationPos.y,
+      lastMove: time - Math.random() * NPC_IDLE_CHECK_INTERVAL,
+      isIdle: true,
     };
-    npcPositions[npcId].targetX = npcPositions[npcId].x;
-    npcPositions[npcId].targetY = npcPositions[npcId].y;
   }
 
   const pos = npcPositions[npcId];
 
-  // 更新目标位置
-  if (time - pos.lastMove > NPC_MOVE_INTERVAL) {
-    pos.targetX = minX + Math.random() * Math.max(1, maxX - minX);
-    pos.targetY = minY + Math.random() * Math.max(1, maxY - minY);
+  // 定期检查：是否走动 or 回到工位
+  if (time - pos.lastMove > NPC_IDLE_CHECK_INTERVAL) {
     pos.lastMove = time;
+    if (pos.isIdle) {
+      // 坐着 → 决定是否走动
+      if (Math.random() < NPC_WANDER_CHANCE) {
+        // 在工位附近小范围走动
+        pos.targetX = pos.stationX + (Math.random() - 0.5) * NPC_WANDER_RADIUS * 2;
+        pos.targetY = pos.stationY + (Math.random() - 0.5) * NPC_WANDER_RADIUS * 2;
+        pos.isIdle = false;
+      }
+    } else {
+      // 走动中 → 决定是否回到工位
+      if (Math.random() < NPC_RETURN_CHANCE) {
+        pos.targetX = pos.stationX;
+        pos.targetY = pos.stationY;
+        pos.isIdle = true;
+      } else {
+        // 继续在附近晃悠
+        pos.targetX = pos.stationX + (Math.random() - 0.5) * NPC_WANDER_RADIUS * 2;
+        pos.targetY = pos.stationY + (Math.random() - 0.5) * NPC_WANDER_RADIUS * 2;
+      }
+    }
   }
 
   // 平滑移动
@@ -726,13 +968,13 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         ctx.fillStyle='#c08850'; ctx.font='11px monospace';
         ctx.fillText('◀ 返回', bbx+6, bby+4);
 
-        // NPCs large - 使用走动系统
+        // NPCs large - 使用工位系统
         const sc=5, sw=12*sc, sh=18*sc;
         const nRects=[];
         present.forEach((npc,i)=>{
-          const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh, t);
+          const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh, t, loc.id, true);
           const nx = pos.x;
-          const floatY = Math.sin(t/600+i*1.7)*2;
+          const floatY = Math.sin(t/1200+i*1.7)*0.8; // 微小呼吸动画
           const ny = pos.y + floatY;
           // Shadow
           ctx.fillStyle='rgba(0,0,0,0.3)';
@@ -799,12 +1041,12 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           ctx.fillStyle=present.length>0?'#c08850':'#58506a';
           ctx.font='10px monospace'; ctx.textAlign='center';
           ctx.fillText(String(present.length), rx+rw-bw-11, ry+bw+4); ctx.textAlign='left';
-          // NPCs with walking
+          // NPCs with station-based positioning
           const sw=12*3, sh=18*3;
           present.forEach((npc,ni)=>{
-            const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh+14, t);
+            const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh+14, t, loc.id, false);
             const nx = pos.x;
-            const floatY=Math.sin(t/600+ni*1.7+i*0.5)*2;
+            const floatY=Math.sin(t/1200+ni*1.7+i*0.5)*0.5; // 微小呼吸动画
             const ny = pos.y + floatY;
             // Shadow
             ctx.fillStyle='rgba(0,0,0,0.25)';
