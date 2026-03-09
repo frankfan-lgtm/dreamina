@@ -792,32 +792,37 @@ const NPC_RETURN_CHANCE = 0.6; // 走动后60%概率回到工位
 const NPC_MOVE_SPEED = 0.03; // 平滑移动速度
 
 // 计算NPC在房间中的工位位置（固定位置）
+// 注意：roomX/Y/W/H 是含边框的房间坐标，家具绘制在 (roomX+bw, roomY+bw) 的内部区域
 function getStationPosition(npcId, roomId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, spriteH, isZoomed) {
   const station = NPC_STATIONS[npcId];
-  const margin = bw + 4;
   const s = isZoomed ? 2 : 1;
+  // 内部区域（与 drawRoomFurniture 一致）
+  const innerX = roomX + bw;
+  const innerY = roomY + bw;
+  const innerW = roomW - 2*bw;
+  const innerH = roomH - 2*bw;
 
   // 如果NPC在自己的"主场"房间，分配固定工位
   if (station && station.room === roomId) {
     if (roomId === 'desk') {
-      // 工位区：按照seat编号分配到具体的桌子位置
+      // 工位区：与 drawDeskRoom 完全一致的计算
       const deskW = 28*s, deskH = 16*s, gap = 8*s;
-      const cols = Math.max(1, Math.floor((roomW - 2*margin - 16*s) / (deskW + gap)));
-      const startX = roomX + margin + (roomW - 2*margin - cols * (deskW + gap) + gap) / 2;
-      const startY = roomY + margin + labelH + 20*s;
+      const cols = Math.max(1, Math.floor((innerW - 16*s) / (deskW + gap)));
+      const startX = innerX + (innerW - cols * (deskW + gap) + gap) / 2;
+      const startY = innerY + 20*s;
       const row = Math.floor(station.seat / cols);
       const col = station.seat % cols;
-      // 坐在椅子的位置（桌子下方）
+      // 坐在椅子的位置（桌子下方，椅子中心）
       return {
         x: startX + col * (deskW + gap) + deskW/2 - spriteW/2,
-        y: startY + row * (deskH + gap + 12*s) + deskH - 2*s,
+        y: startY + row * (deskH + gap + 12*s) + deskH + 1*s,
       };
     }
     if (roomId === 'boss') {
-      // Kelly坐在老板椅位置
-      const dw = Math.min((roomW - 2*margin) * 0.5, 50*s);
-      const dx = roomX + margin + (roomW - 2*margin - dw) / 2;
-      const dy = roomY + margin + 14*s;
+      // Kelly坐在老板椅位置 — 与 drawBossRoom 一致
+      const dw = Math.min(innerW * 0.5, 50*s);
+      const dx = innerX + (innerW - dw) / 2;
+      const dy = innerY + 14*s;
       return {
         x: dx + dw/2 - spriteW/2,
         y: dy + 20*s + 2*s,
@@ -826,10 +831,10 @@ function getStationPosition(npcId, roomId, roomX, roomY, roomW, roomH, bw, label
   }
 
   // 其他情况：在房间内随机分配一个合理位置
-  const minX = roomX + margin + 8;
-  const maxX = roomX + roomW - margin - spriteW - 8;
-  const minY = roomY + margin + labelH + 8;
-  const maxY = roomY + roomH - margin - spriteH - 16;
+  const minX = innerX + 8;
+  const maxX = innerX + innerW - spriteW - 8;
+  const minY = innerY + 8;
+  const maxY = innerY + innerH - spriteH - 16;
   // 用npcId生成一个稳定的伪随机位置
   let hash = 0;
   for (let i = 0; i < npcId.length; i++) hash = ((hash << 5) - hash + npcId.charCodeAt(i)) | 0;
@@ -842,14 +847,19 @@ function getStationPosition(npcId, roomId, roomX, roomY, roomW, roomH, bw, label
 }
 
 function getNpcPosition(npcId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, spriteH, time, roomId, isZoomed) {
-  const margin = bw + 4;
-  const minX = roomX + margin + 2;
-  const maxX = roomX + roomW - margin - spriteW - 2;
-  const minY = roomY + margin + labelH + 2;
-  const maxY = roomY + roomH - margin - spriteH - 14;
+  const innerX = roomX + bw;
+  const innerY = roomY + bw;
+  const innerW = roomW - 2*bw;
+  const innerH = roomH - 2*bw;
+  const minX = innerX + 2;
+  const maxX = innerX + innerW - spriteW - 2;
+  const minY = innerY + 2;
+  const maxY = innerY + innerH - spriteH - 14;
+
+  // 每帧重新计算工位位置（应对窗口大小变化）
+  const stationPos = getStationPosition(npcId, roomId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, spriteH, isZoomed);
 
   if (!npcPositions[npcId]) {
-    const stationPos = getStationPosition(npcId, roomId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, spriteH, isZoomed);
     npcPositions[npcId] = {
       x: stationPos.x,
       y: stationPos.y,
@@ -863,6 +873,15 @@ function getNpcPosition(npcId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, 
   }
 
   const pos = npcPositions[npcId];
+
+  // 更新工位基准位置（应对窗口/缩放变化）
+  pos.stationX = stationPos.x;
+  pos.stationY = stationPos.y;
+  // 如果正在idle（坐着），目标也跟随工位
+  if (pos.isIdle) {
+    pos.targetX = stationPos.x;
+    pos.targetY = stationPos.y;
+  }
 
   // 定期检查：是否走动 or 回到工位
   if (time - pos.lastMove > NPC_IDLE_CHECK_INTERVAL) {
@@ -926,7 +945,11 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
     spriteCacheRef.current = cache;
   }, []);
 
-  useEffect(() => { zoomRef.current = zoomedRoom; }, [zoomedRoom]);
+  useEffect(() => {
+    zoomRef.current = zoomedRoom;
+    // 缩放切换时房间坐标完全不同，必须重算工位位置
+    Object.keys(npcPositions).forEach(id => delete npcPositions[id]);
+  }, [zoomedRoom]);
 
   // Render loop
   useEffect(() => {
