@@ -546,15 +546,12 @@ export default function App() {
     } catch { return {}; }
   });
 
-  const isConfigured = apiConfig.apiKey && apiConfig.model;
-
   const handleSaveConfig = (config) => {
     setApiConfig(config);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch {}
   };
 
-  // 没配置 → 强制进入设置页
-  if (!isConfigured || phase === "setup") {
+  if (phase === "setup") {
     return (
       <ApiSetupScreen
         config={apiConfig}

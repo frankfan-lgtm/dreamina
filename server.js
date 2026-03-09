@@ -20,13 +20,13 @@ app.post("/api/claude", async (req, res) => {
     return res.status(400).json({ error: "缺少 systemPrompt 或 userPrompt" });
   }
 
-  const key = apiKey || process.env.API_KEY;
+  const key = apiKey || process.env.API_KEY || "94090db7-6585-460e-a8ff-7830c1516624";
   if (!key) {
-    return res.status(400).json({ error: "缺少 API Key，请在界面设置中输入" });
+    return res.status(400).json({ error: "缺少 API Key" });
   }
 
   const url = baseUrl || process.env.API_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
-  const modelId = model || process.env.API_MODEL || "";
+  const modelId = model || process.env.API_MODEL || "doubao-seed-2-0-pro-260215";
 
   if (!modelId) {
     return res.status(400).json({ error: "缺少模型/接入点 ID，请在界面设置中输入（如 ep-xxxxx 或 doubao-pro-32k）" });
