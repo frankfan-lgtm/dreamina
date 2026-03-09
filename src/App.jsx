@@ -842,8 +842,8 @@ export default function App() {
     setPhase("sim");
   };
 
-  // 如果没有API配置，先进设置页
-  if (phase === "setup" || !apiConfig.apiKey) {
+  // 只在用户主动点设置时才进设置页（server.js 已内置默认 API Key）
+  if (phase === "setup") {
     return <ApiSetupScreen config={apiConfig} onSave={handleSaveConfig} />;
   }
 
