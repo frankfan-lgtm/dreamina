@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0a0a14;
-  --color-card: #0e0e1c;
-  --color-border: #1c1c32;
-  --color-text: #d8d0c4;
-  --color-text-dim: #58506a;
-  --color-accent: #c08850;
-  --color-positive: #5a9868;
-  --color-negative: #a85050;
-  --color-card-hover: #14142c;
+  --color-bg: #1a1a2e;
+  --color-card: #16213e;
+  --color-border: #2a3a5c;
+  --color-text: #e8e4d8;
+  --color-text-dim: #7a8aaa;
+  --color-accent: #38b6d2;
+  --color-accent2: #2a8ab0;
+  --color-positive: #5ab878;
+  --color-negative: #d05858;
+  --color-card-hover: #1e2d52;
+  --color-panel-bg: #0f1a32;
+  --color-panel-header: linear-gradient(90deg, #2898c8, #38c8e8);
   --font-serif: "Noto Serif SC", serif;
 }
 
@@ -44,13 +47,18 @@ body {
   50% { transform: translateY(-3px); }
 }
 
+@keyframes pixel-blink {
+  0%, 90%, 100% { opacity: 1; }
+  95% { opacity: 0.3; }
+}
+
 .animate-fade-in { animation: fade-in 0.3s ease-out; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
 /* ─── 主布局 ─── */
 .simulation-layout {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 340px;
   grid-template-rows: 1fr auto;
   height: 100vh;
   overflow: hidden;
@@ -62,7 +70,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-right: 1px solid var(--color-border);
+  border-right: 2px solid #1a2848;
 }
 
 .simulation-panel {
@@ -71,7 +79,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-card);
+  background: var(--color-panel-bg);
 }
 
 .time-bar {
@@ -80,20 +88,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  background: var(--color-card);
-  border-top: 1px solid var(--color-border);
+  padding: 6px 12px;
+  background: linear-gradient(180deg, #1a2848 0%, #0f1a32 100%);
+  border-top: 2px solid #2a4a78;
   gap: 12px;
 }
 
-/* ─── 顶栏 ─── */
+/* ─── 顶栏（Pokemon风格） ─── */
 .sim-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-card);
+  padding: 6px 12px;
+  border-bottom: 2px solid #2a4a78;
+  background: linear-gradient(180deg, #1e3058 0%, #162448 100%);
 }
 
 .intervention-bar {
@@ -101,17 +109,17 @@ body {
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--color-border);
-  background: rgba(14, 14, 28, 0.8);
+  border-bottom: 2px solid #2a4a78;
+  background: rgba(15, 26, 50, 0.95);
   animation: fade-in 0.2s ease-out;
 }
 
 /* ─── Canvas 地图 ─── */
 .canvas-map-container {
-  height: 280px;
+  height: 300px;
   flex-shrink: 0;
-  border-bottom: 2px solid var(--color-border);
-  background: #0a0a14;
+  border-bottom: 2px solid #2a4a78;
+  background: #0f1828;
   position: relative;
   cursor: pointer;
 }
@@ -138,11 +146,12 @@ body {
   justify-content: space-between;
   padding: 6px 12px;
   font-size: 12px;
-  color: var(--color-accent);
-  border-bottom: 1px solid var(--color-border);
-  background: rgba(192, 136, 80, 0.05);
+  color: #38c8e8;
+  border-bottom: 2px solid #2a4a78;
+  background: linear-gradient(180deg, #162448 0%, #0f1a32 100%);
   flex-shrink: 0;
   letter-spacing: 1px;
+  font-weight: bold;
 }
 
 .dialogue-stream {
@@ -152,24 +161,26 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  background: linear-gradient(180deg, #0f1828 0%, #0a1220 100%);
 }
 
 .dialogue-row {
   display: flex;
   gap: 10px;
   padding: 6px 8px;
-  border-radius: 4px;
-  border-left: 2px solid transparent;
+  border-radius: 6px;
+  border-left: 3px solid transparent;
   transition: background 0.2s;
+  background: rgba(22, 36, 72, 0.4);
 }
 
 .dialogue-row:hover {
-  background: rgba(255,255,255,0.02);
+  background: rgba(42, 74, 120, 0.3);
 }
 
 .dialogue-latest {
-  border-left-color: var(--color-accent);
-  background: rgba(192, 136, 80, 0.04);
+  border-left-color: #38c8e8;
+  background: rgba(56, 182, 210, 0.08);
 }
 
 .dialogue-meta {
@@ -203,7 +214,8 @@ body {
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
+  color: #68d0e8;
 }
 
 .dialogue-arrow {
@@ -223,7 +235,7 @@ body {
   font-style: italic;
   margin-top: 2px;
   padding-left: 8px;
-  border-left: 1px solid var(--color-border);
+  border-left: 2px solid #2a4a78;
 }
 
 .dialogue-event {
@@ -231,15 +243,180 @@ body {
   gap: 8px;
   padding: 4px 8px;
   font-size: 11px;
-  color: var(--color-accent);
-  background: rgba(192, 136, 80, 0.06);
-  border-radius: 3px;
+  color: #38c8e8;
+  background: rgba(56, 182, 210, 0.08);
+  border-radius: 4px;
+  border: 1px solid rgba(56, 182, 210, 0.2);
+}
+
+/* ─── Pokemon风格面板 ─── */
+.panel-header-pokemon {
+  background: linear-gradient(90deg, #2090c0 0%, #38c8e8 100%);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #1870a0;
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+  flex-shrink: 0;
+}
+
+.panel-tab-pokemon {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.panel-tab-pokemon.active {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+  border-color: rgba(255,255,255,0.3);
+}
+
+.panel-tab-pokemon:not(.active) {
+  color: rgba(255,255,255,0.6);
+}
+
+.panel-tab-pokemon:not(.active):hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.9);
+}
+
+/* ─── Pokemon风格按钮 ─── */
+.btn-pokemon {
+  padding: 5px 14px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 2px solid;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+}
+
+.btn-pokemon-primary {
+  background: linear-gradient(180deg, #38c8e8 0%, #2098c0 100%);
+  border-color: #1880a8;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.btn-pokemon-primary:hover {
+  background: linear-gradient(180deg, #48d8f8 0%, #28a8d0 100%);
+}
+
+.btn-pokemon-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-pokemon-secondary {
+  background: linear-gradient(180deg, #384868 0%, #283858 100%);
+  border-color: #2a4a78;
+  color: #a8c8e8;
+}
+
+.btn-pokemon-secondary:hover {
+  background: linear-gradient(180deg, #485878 0%, #384868 100%);
+  color: #c8e0f8;
+}
+
+.btn-pokemon-danger {
+  background: linear-gradient(180deg, #d06060 0%, #b04848 100%);
+  border-color: #903838;
+  color: #fff;
 }
 
 /* ─── 面板通用 ─── */
 .panel-section-title {
   font-size: 11px;
-  color: var(--color-text-dim);
+  color: #38c8e8;
   margin-bottom: 6px;
   letter-spacing: 0.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* ─── Pokemon风格卡片 ─── */
+.poke-card {
+  background: linear-gradient(180deg, #1a2848 0%, #162040 100%);
+  border: 2px solid #2a4a78;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.poke-card:hover {
+  border-color: #3a6a98;
+}
+
+/* ─── 进度条样式 ─── */
+.poke-bar {
+  height: 8px;
+  background: #0a1428;
+  border-radius: 4px;
+  border: 1px solid #1a2848;
+  overflow: hidden;
+}
+
+.poke-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s;
+}
+
+/* ─── NPC快速选择栏 ─── */
+.npc-selector-bar {
+  border-top: 2px solid #2a4a78;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: linear-gradient(180deg, #162448 0%, #0f1a32 100%);
+}
+
+.npc-selector-btn {
+  padding: 4px 6px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 2px solid transparent;
+}
+
+.npc-selector-btn.active {
+  background: rgba(56, 182, 210, 0.2);
+  border-color: #38c8e8;
+  box-shadow: 0 0 8px rgba(56, 200, 232, 0.3);
+}
+
+.npc-selector-btn:not(.active):hover {
+  background: rgba(56, 182, 210, 0.1);
+  border-color: #2a4a78;
+}
+
+/* ─── 速度选择器 ─── */
+.speed-select {
+  background: linear-gradient(180deg, #1a2848 0%, #162040 100%);
+  border: 2px solid #2a4a78;
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: #a8c8e8;
+  cursor: pointer;
+  outline: none;
+}
+
+.speed-select:focus {
+  border-color: #38c8e8;
 }

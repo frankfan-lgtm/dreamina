@@ -8,12 +8,12 @@ export const WORLD_CONFIG = {
   name: "即梦办公室",
   description: "字节跳动即梦(Dreamina)团队的日常，一群理想主义者在探索AI创作的未来",
   locations: [
-    { id: "desk", name: "工位区", emoji: "🖥️", color: "#2a2a48", desc: "产品经理们的工位，白板上画满了产品方案" },
-    { id: "meeting", name: "会议室", emoji: "📊", color: "#3a2848", desc: "关于创作Agent的头脑风暴永远停不下来" },
-    { id: "pantry", name: "茶水间", emoji: "☕", color: "#483828", desc: "咖啡机旁边是灵感和八卦的集散地" },
-    { id: "boss", name: "Kelly办公室", emoji: "🚪", color: "#284838", desc: "Kelly的办公室，墙上挂着'让想象力自由'的标语" },
-    { id: "canteen", name: "食堂", emoji: "🍜", color: "#484828", desc: "午餐时间是难得的放松时刻" },
-    { id: "home", name: "家", emoji: "🏠", color: "#2a2838", desc: "一天的疲惫在这里卸下——或者继续想方案" },
+    { id: "desk", name: "工位区", emoji: "🖥️", color: "#b8a878", desc: "产品经理们的工位，白板上画满了产品方案" },
+    { id: "meeting", name: "会议室", emoji: "📊", color: "#a8b8a0", desc: "关于创作Agent的头脑风暴永远停不下来" },
+    { id: "pantry", name: "茶水间", emoji: "☕", color: "#c0a880", desc: "咖啡机旁边是灵感和八卦的集散地" },
+    { id: "boss", name: "Kelly办公室", emoji: "🚪", color: "#90b0a0", desc: "Kelly的办公室，墙上挂着'让想象力自由'的标语" },
+    { id: "canteen", name: "食堂", emoji: "🍜", color: "#c8b888", desc: "午餐时间是难得的放松时刻" },
+    { id: "home", name: "家", emoji: "🏠", color: "#a0a8b8", desc: "一天的疲惫在这里卸下——或者继续想方案" },
   ],
   resources: {
     hc: { name: "HC（人员编制）", total: 7, current: 7, desc: "团队核心成员" },
