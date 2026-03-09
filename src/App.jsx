@@ -15,7 +15,7 @@ function sentimentColor(val) {
   return "#605868";
 }
 
-// API Key 不再需要，通过本地服务器调用 Claude CLI
+const API_KEY_STORAGE_KEY = "dreamina_api_key";
 
 // ─── 世界选择页 ───
 function WorldSelectScreen({ onSelect }) {
@@ -459,31 +459,82 @@ function SimulationScreen({ template, apiKey, onBack }) {
   );
 }
 
+// ─── API Key 设置面板 ───
+function ApiKeyBanner({ apiKey, onChange }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="fixed top-2 right-2 z-50 flex items-center gap-2">
+      {show ? (
+        <div className="bg-card border border-border rounded-lg p-3 flex items-center gap-2 shadow-lg animate-fade-in">
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="sk-ant-..."
+            className="bg-bg border border-border rounded px-3 py-1 text-sm w-64 focus:border-accent outline-none"
+          />
+          <button
+            onClick={() => setShow(false)}
+            className="text-text-dim hover:text-accent text-sm cursor-pointer"
+          >
+            ✓
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShow(true)}
+          className={`px-3 py-1 rounded-lg text-xs border cursor-pointer transition-all ${
+            apiKey
+              ? "bg-card border-border text-text-dim hover:border-accent"
+              : "bg-accent/20 border-accent text-accent animate-pulse-glow"
+          }`}
+        >
+          🔑 {apiKey ? "API Key 已设置" : "设置 API Key"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── App Root ───
 export default function App() {
   const [phase, setPhase] = useState("select");
   const [template, setTemplate] = useState(null);
+  const [apiKey, setApiKey] = useState(() => {
+    try { return localStorage.getItem(API_KEY_STORAGE_KEY) || ""; } catch { return ""; }
+  });
+
+  const handleApiKeyChange = (key) => {
+    setApiKey(key);
+    try { localStorage.setItem(API_KEY_STORAGE_KEY, key); } catch {}
+  };
 
   if (phase === "select") {
     return (
-      <WorldSelectScreen
-        onSelect={(t) => {
-          setTemplate(t);
-          setPhase("running");
-        }}
-      />
+      <>
+        <ApiKeyBanner apiKey={apiKey} onChange={handleApiKeyChange} />
+        <WorldSelectScreen
+          onSelect={(t) => {
+            setTemplate(t);
+            setPhase("running");
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <SimulationScreen
-      key={template.id}
-      template={template}
-      apiKey=""
-      onBack={() => {
-        setTemplate(null);
-        setPhase("select");
-      }}
-    />
+    <>
+      <ApiKeyBanner apiKey={apiKey} onChange={handleApiKeyChange} />
+      <SimulationScreen
+        key={template.id}
+        template={template}
+        apiKey={apiKey}
+        onBack={() => {
+          setTemplate(null);
+          setPhase("select");
+        }}
+      />
+    </>
   );
 }

@@ -98,7 +98,7 @@ export async function callClaude(apiKey, systemPrompt, userPrompt) {
   const res = await fetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ systemPrompt, userPrompt }),
+    body: JSON.stringify({ systemPrompt, userPrompt, apiKey }),
   });
 
   if (!res.ok) {
