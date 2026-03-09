@@ -23,6 +23,133 @@ function barStr(val, max = 100) {
   return `${pct}%`;
 }
 
+// ─── 像素精灵定义（宠物小精灵风格）───
+const SPRITE_DATA = {
+  zhangwei: { // 程序员 - 蓝衣
+    hair: "#2a2a3a", skin: "#f0c8a0", shirt: "#4080c0", pants: "#2a3a5a",
+    pixels: [
+      "..HH..",
+      ".HHHH.",
+      ".SSSS.",
+      ".SSSS.",
+      "..SS..",
+      ".TTTT.",
+      "TTTTTT",
+      ".TTTT.",
+      ".PPPP.",
+      ".PP.PP",
+    ]
+  },
+  linting: { // PM - 红衣长发
+    hair: "#3a2020", skin: "#f0c8a0", shirt: "#c05050", pants: "#4a3050",
+    pixels: [
+      ".HHHH.",
+      "HHHHHH",
+      "H.SS.H",
+      "H.SS.H",
+      "..SS..",
+      ".TTTT.",
+      ".TTTT.",
+      ".TTTT.",
+      ".PPPP.",
+      ".PP.PP",
+    ]
+  },
+  zhaopeng: { // 领导 - 深色西装
+    hair: "#1a1a2a", skin: "#e8c098", shirt: "#2a2a3a", pants: "#1a1a2a",
+    pixels: [
+      "..HH..",
+      ".HHHH.",
+      ".SSSS.",
+      ".SSSS.",
+      "..SS..",
+      ".TTTT.",
+      "TTTTTT",
+      ".TTTT.",
+      ".PPPP.",
+      ".PP.PP",
+    ]
+  },
+  liufang: { // 新人 - 绿衣短发
+    hair: "#4a3030", skin: "#f0c8a0", shirt: "#50a060", pants: "#3a4a5a",
+    pixels: [
+      ".HHHH.",
+      ".HHHH.",
+      ".SSSS.",
+      ".SSSS.",
+      "..SS..",
+      ".TTTT.",
+      ".TTTT.",
+      ".TTTT.",
+      ".PPPP.",
+      ".PP.PP",
+    ]
+  },
+  chenxi: { // 设计师 - 紫衣
+    hair: "#3a2a40", skin: "#f0c8a0", shirt: "#8060b0", pants: "#3a3050",
+    pixels: [
+      "..HH..",
+      ".HHHH.",
+      ".SSSS.",
+      ".SSSS.",
+      "..SS..",
+      ".TTTT.",
+      "TTTTTT",
+      ".TTTT.",
+      ".PPPP.",
+      ".PP.PP",
+    ]
+  },
+  wangli: { // HR - 橙衣长发
+    hair: "#5a3020", skin: "#f0c8a0", shirt: "#c08850", pants: "#4a3a50",
+    pixels: [
+      ".HHHH.",
+      "HHHHHH",
+      "H.SS.H",
+      "H.SS.H",
+      "..SS..",
+      ".TTTT.",
+      ".TTTT.",
+      ".TTTT.",
+      ".PPPP.",
+      ".PP.PP",
+    ]
+  },
+};
+
+function PixelSprite({ npcId, size = 3 }) {
+  const data = SPRITE_DATA[npcId];
+  if (!data) return <span style={{ fontSize: 24 }}>?</span>;
+
+  const colorMap = { H: data.hair, S: data.skin, T: data.shirt, P: data.pants };
+  const shadows = [];
+  data.pixels.forEach((row, y) => {
+    [...row].forEach((ch, x) => {
+      if (ch !== ".") {
+        shadows.push(`${x * size}px ${y * size}px 0 ${colorMap[ch]}`);
+      }
+    });
+  });
+
+  return (
+    <div style={{
+      width: data.pixels[0].length * size,
+      height: data.pixels.length * size,
+      position: "relative",
+    }}>
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: size,
+        height: size,
+        boxShadow: shadows.join(","),
+        imageRendering: "pixelated",
+      }} />
+    </div>
+  );
+}
+
 const STORAGE_KEY = "dreamina_api_config";
 
 // ─── 初始化NPC状态 ───
@@ -89,6 +216,7 @@ function PixelMap({ locations, npcs, selectedNPC, onSelectNPC }) {
             <div className="pixel-room-label">
               <span>{loc.emoji}</span>
               <span>{loc.name}</span>
+              <span className="pixel-room-count">{present.length}</span>
             </div>
             <div className="pixel-room-floor">
               {present.map((npc) => (
@@ -96,16 +224,18 @@ function PixelMap({ locations, npcs, selectedNPC, onSelectNPC }) {
                   onClick={() => onSelectNPC(npc.id === selectedNPC ? null : npc.id)}
                   className={`pixel-npc ${npc.id === selectedNPC ? "selected" : ""}`}
                   title={`${npc.name} - ${npc.state.mood}`}>
-                  <span className="pixel-npc-sprite">{npc.emoji}</span>
+                  <div className="pixel-npc-sprite">
+                    <PixelSprite npcId={npc.id} size={3} />
+                  </div>
                   <span className="pixel-npc-name">{npc.name}</span>
                   {npc.thought && (
                     <div className="pixel-bubble thought">
-                      💭 {npc.thought.length > 15 ? npc.thought.slice(0, 15) + "..." : npc.thought}
+                      {npc.thought.length > 12 ? npc.thought.slice(0, 12) + ".." : npc.thought}
                     </div>
                   )}
                   {npc.action && !npc.thought && (
                     <div className="pixel-bubble action">
-                      {npc.action.length > 15 ? npc.action.slice(0, 15) + "..." : npc.action}
+                      {npc.action.length > 12 ? npc.action.slice(0, 12) + ".." : npc.action}
                     </div>
                   )}
                   <div className="pixel-npc-bars">
@@ -124,25 +254,63 @@ function PixelMap({ locations, npcs, selectedNPC, onSelectNPC }) {
   );
 }
 
-// ─── 对话流（气泡）───
+// ─── 对话流（主体区域）───
 function DialogueStream({ dialogues, npcs }) {
   const npcMap = {};
   for (const n of npcs) npcMap[n.id] = n;
-  if (dialogues.length === 0) return <div className="text-center text-text-dim py-2 text-xs">等待世界运转...</div>;
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, [dialogues.length]);
+
+  if (dialogues.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-text-dim text-sm">
+        <div className="text-center">
+          <div className="text-3xl mb-2">...</div>
+          <div>点击下方播放按钮，世界开始运转</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-1 max-h-36 overflow-y-auto">
-      {[...dialogues].reverse().slice(0, 20).map((d, i) => {
+    <div ref={scrollRef} className="dialogue-stream">
+      {[...dialogues].reverse().slice(0, 50).map((d, i) => {
         const from = npcMap[d.from];
         const to = npcMap[d.to];
+        const isEvent = !from; // 事件类消息
+        if (isEvent) {
+          return (
+            <div key={i} className="dialogue-event animate-fade-in">
+              <span className="text-text-dim">[{d.day}d {d.hour}h]</span>
+              <span>{d.text || d.content}</span>
+            </div>
+          );
+        }
         return (
-          <div key={i} className="text-xs animate-fade-in flex gap-1 items-start">
-            <span className="text-text-dim shrink-0">[{d.day}d {d.hour}h]</span>
-            <span className="shrink-0">{from?.emoji}{from?.name}</span>
-            <span className="text-text-dim">→</span>
-            <span className="shrink-0">{to?.emoji}{to?.name}</span>
-            <span className="text-accent">"{d.content}"</span>
-            {d.subtext && <span className="text-text-dim italic">({d.subtext})</span>}
+          <div key={i} className={`dialogue-row animate-fade-in ${i === 0 ? "dialogue-latest" : ""}`}>
+            <div className="dialogue-meta">
+              <span className="dialogue-time">{d.day}d {d.hour}h</span>
+            </div>
+            <div className="dialogue-body">
+              <div className="dialogue-speakers">
+                <span className="dialogue-from">
+                  <PixelSprite npcId={d.from} size={2} />
+                  <span>{from?.name}</span>
+                </span>
+                <span className="dialogue-arrow">&#10132;</span>
+                <span className="dialogue-to">
+                  <PixelSprite npcId={d.to} size={2} />
+                  <span>{to?.name}</span>
+                </span>
+              </div>
+              <div className="dialogue-content">"{d.content}"</div>
+              {d.subtext && <div className="dialogue-subtext">{d.subtext}</div>}
+            </div>
           </div>
         );
       })}
@@ -778,14 +946,17 @@ function SimulationScreen({ apiConfig, onSettings }) {
           </div>
         )}
 
-        {/* 像素地图 */}
-        <div className="flex-1 overflow-y-auto p-3">
+        {/* 像素地图（紧凑） */}
+        <div className="pixel-map-container">
           <PixelMap locations={world.locations} npcs={npcs} selectedNPC={selectedNPC} onSelectNPC={setSelectedNPC} />
         </div>
 
-        {/* 对话流 */}
-        <div className="border-t border-border px-3 py-2 bg-card/30">
-          <div className="text-[10px] text-text-dim mb-1">💬 众生之声</div>
+        {/* 众生之声（主体区域） */}
+        <div className="dialogue-container">
+          <div className="dialogue-header">
+            <span>&#128172; 众生之声</span>
+            <span className="text-text-dim text-xs">{dialogues.length} 条记录</span>
+          </div>
           <DialogueStream dialogues={dialogues} npcs={npcs} />
         </div>
       </div>
