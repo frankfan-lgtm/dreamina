@@ -224,51 +224,258 @@ function ApiSetupScreen({ config, onSave }) {
   );
 }
 
-// ─── 像素地图区块 ───
-function PixelMap({ locations, npcs, selectedNPC, onSelectNPC }) {
+// ─── Canvas 地图引擎 ───
+function hexToRgb(hex) {
+  return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+}
+
+function rgbHex(r,g,b) {
+  return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
+}
+
+// Pre-render sprite to offscreen canvas
+function prerenderSprite(npcId, scale) {
+  const colors = SPRITE_COLORS[npcId];
+  if (!colors) return null;
+  const rows = colors.body === "male" ? MALE_BODY : FEMALE_BODY;
+  const outline = "#12101a";
+  const w = rows[0].length, h = rows.length;
+  const c = document.createElement('canvas');
+  c.width = w * scale; c.height = h * scale;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const grid = rows.map(row => [...row].map(ch => ch === "." ? null : (colors[ch] || null)));
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (grid[y][x]) {
+        ctx.fillStyle = grid[y][x];
+        ctx.fillRect(x*scale, y*scale, scale, scale);
+      } else {
+        let near = false;
+        for (let dy=-1; dy<=1&&!near; dy++) for (let dx=-1; dx<=1&&!near; dx++) {
+          if (!dy&&!dx) continue;
+          const ny=y+dy, nx=x+dx;
+          if (ny>=0&&ny<h&&nx>=0&&nx<w&&grid[ny][nx]) near=true;
+        }
+        if (near) { ctx.fillStyle=outline; ctx.fillRect(x*scale,y*scale,scale,scale); }
+      }
+    }
+  }
+  return c;
+}
+
+// Draw checkerboard floor
+function drawFloor(ctx, x, y, w, h, color) {
+  const [r,g,b] = hexToRgb(color);
+  const ts = 16;
+  for (let ty=0; ty<h; ty+=ts) for (let tx=0; tx<w; tx+=ts) {
+    const light = ((Math.floor(tx/ts)+Math.floor(ty/ts))%2)===0;
+    ctx.fillStyle = rgbHex(r+(light?10:-6), g+(light?10:-6), b+(light?10:-6));
+    ctx.fillRect(x+tx, y+ty, Math.min(ts,w-tx), Math.min(ts,h-ty));
+  }
+}
+
+// Draw 3D room border
+function drawBorder(ctx, x, y, w, h) {
+  ctx.fillStyle='#3a3a55'; ctx.fillRect(x,y,w,3); ctx.fillRect(x,y,3,h);
+  ctx.fillStyle='#16162a'; ctx.fillRect(x,y+h-3,w,3); ctx.fillRect(x+w-3,y,3,h);
+}
+
+// Main Canvas Map component with zoom
+function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const spriteCacheRef = useRef({});
+  const [zoomedRoom, setZoomedRoom] = useState(null);
+  const zoomRef = useRef(null);
+  const roomRectsRef = useRef([]);
+  const npcRectsRef = useRef([]);
+  const propsRef = useRef({});
+  propsRef.current = { locations, npcs, selectedNPC, onSelectNPC };
+
+  // Pre-render sprites at two scales
+  useEffect(() => {
+    const cache = {};
+    for (const id of Object.keys(SPRITE_COLORS)) {
+      cache[id] = { s: prerenderSprite(id, 3), l: prerenderSprite(id, 5) };
+    }
+    spriteCacheRef.current = cache;
+  }, []);
+
+  useEffect(() => { zoomRef.current = zoomedRoom; }, [zoomedRoom]);
+
+  // Render loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const box = containerRef.current;
+    if (!canvas || !box) return;
+    let raf;
+
+    const render = () => {
+      const { locations: locs, npcs: ns, selectedNPC: sel } = propsRef.current;
+      const cw = box.clientWidth, ch = box.clientHeight;
+      if (canvas.width!==cw||canvas.height!==ch) { canvas.width=cw; canvas.height=ch; }
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle='#0a0a14'; ctx.fillRect(0,0,cw,ch);
+      const t = Date.now();
+      const pad=8, gap=6, bw=3, labelH=20;
+      const zoomed = zoomRef.current;
+
+      if (zoomed) {
+        // ─── Zoomed into one room ───
+        const loc = locs.find(l=>l.id===zoomed);
+        if (!loc) { raf=requestAnimationFrame(render); return; }
+        const present = ns.filter(n=>n.region===loc.id);
+        const rx=pad, ry=pad, rw=cw-2*pad, rh=ch-2*pad;
+        drawFloor(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.color);
+        drawBorder(ctx, rx, ry, rw, rh);
+
+        // Label
+        ctx.fillStyle='#d8d0c4'; ctx.font='bold 14px monospace'; ctx.textBaseline='top';
+        ctx.fillText(`${loc.emoji} ${loc.name}`, rx+bw+8, ry+bw+4);
+
+        // Back button
+        const bbx=cw-pad-62, bby=pad+bw+3;
+        ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(bbx,bby,54,18);
+        ctx.strokeStyle='#58506a'; ctx.strokeRect(bbx,bby,54,18);
+        ctx.fillStyle='#c08850'; ctx.font='11px monospace';
+        ctx.fillText('◀ 返回', bbx+6, bby+4);
+
+        // NPCs large
+        const sc=5, sw=12*sc, sh=18*sc;
+        const fy=ry+bw+labelH+8;
+        const nRects=[];
+        const cols = Math.max(3, Math.ceil(Math.sqrt(present.length+1)));
+        const cellW = (rw-2*bw-20)/cols;
+        present.forEach((npc,i)=>{
+          const col=i%cols, row=Math.floor(i/cols);
+          const nx = rx+bw+10+col*cellW+(cellW-sw)/2;
+          const floatY = Math.sin(t/600+i*1.7)*4;
+          const ny = fy+row*(sh+30)+floatY;
+          // Shadow
+          ctx.fillStyle='rgba(0,0,0,0.3)';
+          ctx.beginPath(); ctx.ellipse(nx+sw/2, ny+sh+3, sw*0.4, 5, 0, 0, Math.PI*2); ctx.fill();
+          // Sprite
+          const sc2 = spriteCacheRef.current[npc.id]?.l;
+          if (sc2) ctx.drawImage(sc2, nx, ny);
+          // Selection
+          if (npc.id===sel) {
+            ctx.strokeStyle='#c08850'; ctx.lineWidth=2;
+            ctx.strokeRect(nx-4,ny-4,sw+8,sh+28);
+          }
+          // Name
+          ctx.fillStyle='#d8d0c4'; ctx.font='12px monospace'; ctx.textAlign='center';
+          ctx.fillText(npc.name, nx+sw/2, ny+sh+8); ctx.textAlign='left';
+          // Mood bar
+          const mbw=32, mbx=nx+(sw-mbw)/2, mby=ny+sh+22;
+          ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(mbx,mby,mbw,4);
+          ctx.fillStyle=moodColor(npc.state.moodValue);
+          ctx.fillRect(mbx,mby,mbw*npc.state.moodValue/100,4);
+          // Thought bubble
+          if (npc.thought||npc.action) {
+            const txt = npc.thought || npc.action;
+            const display = txt.length>10 ? txt.slice(0,10)+'..' : txt;
+            ctx.font='10px monospace';
+            const tw = ctx.measureText(display).width+8;
+            const bx2=nx+sw/2-tw/2, by2=ny-18;
+            ctx.fillStyle='rgba(10,10,20,0.9)';
+            ctx.fillRect(bx2,by2,tw,16);
+            ctx.strokeStyle = npc.thought ? 'rgba(192,136,80,0.5)' : '#2a2a40';
+            ctx.lineWidth=1; ctx.strokeRect(bx2,by2,tw,16);
+            ctx.fillStyle = npc.thought ? '#c08850' : '#8880a0';
+            ctx.textAlign='center';
+            ctx.fillText(display, nx+sw/2, by2+3); ctx.textAlign='left';
+          }
+          nRects.push({id:npc.id, x:nx-4, y:ny-4, w:sw+8, h:sh+32});
+        });
+        if (present.length===0) {
+          ctx.fillStyle='#28283a'; ctx.font='12px monospace'; ctx.textAlign='center';
+          ctx.fillText('空无一人...', cw/2, ch/2); ctx.textAlign='left';
+        }
+        npcRectsRef.current = nRects;
+        roomRectsRef.current = [{id:'__back', x:bbx, y:bby, w:54, h:18}];
+
+      } else {
+        // ─── Overview: 3x2 grid ───
+        const cols=3, rows=2;
+        const rw = Math.floor((cw-2*pad-(cols-1)*gap)/cols);
+        const rh = Math.floor((ch-2*pad-(rows-1)*gap)/rows);
+        const rects=[];
+        locs.forEach((loc,i)=>{
+          const col=i%cols, row=Math.floor(i/cols);
+          const rx=pad+col*(rw+gap), ry=pad+row*(rh+gap);
+          drawFloor(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.color);
+          drawBorder(ctx, rx, ry, rw, rh);
+          // Label
+          ctx.fillStyle='#b8b0a8'; ctx.font='11px monospace'; ctx.textBaseline='top';
+          ctx.fillText(`${loc.emoji} ${loc.name}`, rx+bw+4, ry+bw+3);
+          // Count badge
+          const present=ns.filter(n=>n.region===loc.id);
+          ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(rx+rw-bw-20,ry+bw+2,17,14);
+          ctx.fillStyle=present.length>0?'#c08850':'#58506a';
+          ctx.font='10px monospace'; ctx.textAlign='center';
+          ctx.fillText(String(present.length), rx+rw-bw-11, ry+bw+4); ctx.textAlign='left';
+          // NPCs
+          const sw=12*3, sh=18*3;
+          const maxC = Math.max(2, Math.floor((rw-2*bw-8)/(sw+8)));
+          present.forEach((npc,ni)=>{
+            const c=ni%maxC, r=Math.floor(ni/maxC);
+            const nx=rx+bw+6+c*(sw+8);
+            const floatY=Math.sin(t/600+ni*1.7+i*0.5)*2;
+            const ny=ry+bw+labelH+4+r*(sh+16)+floatY;
+            // Shadow
+            ctx.fillStyle='rgba(0,0,0,0.25)';
+            ctx.beginPath(); ctx.ellipse(nx+sw/2,ny+sh+1,sw*0.35,3,0,0,Math.PI*2); ctx.fill();
+            // Sprite
+            const spr=spriteCacheRef.current[npc.id]?.s;
+            if(spr) ctx.drawImage(spr,nx,ny);
+            // Selection
+            if(npc.id===sel){ ctx.strokeStyle='#c08850'; ctx.lineWidth=1; ctx.strokeRect(nx-2,ny-2,sw+4,sh+14); }
+            // Name
+            ctx.fillStyle='#c8c0b8'; ctx.font='9px monospace'; ctx.textAlign='center';
+            ctx.fillText(npc.name, nx+sw/2, ny+sh+3); ctx.textAlign='left';
+            // Mini mood
+            const mbw2=22, mbx2=nx+(sw-mbw2)/2, mby2=ny+sh+12;
+            ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(mbx2,mby2,mbw2,2);
+            ctx.fillStyle=moodColor(npc.state.moodValue);
+            ctx.fillRect(mbx2,mby2,mbw2*npc.state.moodValue/100,2);
+          });
+          rects.push({id:loc.id, x:rx, y:ry, w:rw, h:rh});
+        });
+        roomRectsRef.current=rects; npcRectsRef.current=[];
+      }
+      raf=requestAnimationFrame(render);
+    };
+    raf=requestAnimationFrame(render);
+    return ()=>cancelAnimationFrame(raf);
+  }, []);
+
+  // Click handler
+  const handleClick = useCallback((e)=>{
+    const canvas=canvasRef.current; if(!canvas) return;
+    const rect=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+    const x=(e.clientX-rect.left)*scaleX, y=(e.clientY-rect.top)*scaleY;
+    const zoomed=zoomRef.current;
+    if(zoomed){
+      for(const r of roomRectsRef.current) if(r.id==='__back'&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h){ setZoomedRoom(null); return; }
+      for(const r of npcRectsRef.current) if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h){
+        propsRef.current.onSelectNPC(r.id===propsRef.current.selectedNPC?null:r.id); return;
+      }
+    } else {
+      for(const r of roomRectsRef.current) if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h){ setZoomedRoom(r.id); return; }
+    }
+  },[]);
+
+  useEffect(()=>{
+    const h=e=>{ if(e.key==='Escape') setZoomedRoom(null); };
+    window.addEventListener('keydown',h); return()=>window.removeEventListener('keydown',h);
+  },[]);
+
   return (
-    <div className="pixel-map">
-      {locations.map((loc) => {
-        const present = npcs.filter((n) => n.region === loc.id);
-        return (
-          <div key={loc.id} className="pixel-room" style={{ "--room-color": loc.color }}>
-            <div className="pixel-room-label">
-              <span>{loc.emoji}</span>
-              <span>{loc.name}</span>
-              <span className="pixel-room-count">{present.length}</span>
-            </div>
-            <div className="pixel-room-floor">
-              {present.map((npc) => (
-                <button key={npc.id}
-                  onClick={() => onSelectNPC(npc.id === selectedNPC ? null : npc.id)}
-                  className={`pixel-npc ${npc.id === selectedNPC ? "selected" : ""}`}
-                  title={`${npc.name} - ${npc.state.mood}`}>
-                  <div className="pixel-npc-sprite">
-                    <PixelSprite npcId={npc.id} size={3} />
-                  </div>
-                  <span className="pixel-npc-name">{npc.name}</span>
-                  {npc.thought && (
-                    <div className="pixel-bubble thought">
-                      {npc.thought.length > 12 ? npc.thought.slice(0, 12) + ".." : npc.thought}
-                    </div>
-                  )}
-                  {npc.action && !npc.thought && (
-                    <div className="pixel-bubble action">
-                      {npc.action.length > 12 ? npc.action.slice(0, 12) + ".." : npc.action}
-                    </div>
-                  )}
-                  <div className="pixel-npc-bars">
-                    <div className="mini-bar" title={`情绪 ${npc.state.moodValue}`}>
-                      <div className="mini-bar-fill" style={{ width: barStr(npc.state.moodValue), backgroundColor: moodColor(npc.state.moodValue) }} />
-                    </div>
-                  </div>
-                </button>
-              ))}
-              {present.length === 0 && <span className="pixel-empty">· · ·</span>}
-            </div>
-          </div>
-        );
-      })}
+    <div ref={containerRef} className="canvas-map-container">
+      <canvas ref={canvasRef} onClick={handleClick} className="canvas-map" />
     </div>
   );
 }
@@ -965,10 +1172,8 @@ function SimulationScreen({ apiConfig, onSettings }) {
           </div>
         )}
 
-        {/* 像素地图（紧凑） */}
-        <div className="pixel-map-container">
-          <PixelMap locations={world.locations} npcs={npcs} selectedNPC={selectedNPC} onSelectNPC={setSelectedNPC} />
-        </div>
+        {/* Canvas 地图 */}
+        <CanvasMap locations={world.locations} npcs={npcs} selectedNPC={selectedNPC} onSelectNPC={setSelectedNPC} />
 
         {/* 众生之声（主体区域） */}
         <div className="dialogue-container">
