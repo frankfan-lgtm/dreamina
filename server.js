@@ -18,10 +18,10 @@ app.use((req, res, next) => {
 app.use(express.static(join(__dirname, "dist"), { etag: false, lastModified: false }));
 
 app.post("/api/claude", async (req, res) => {
-  const { systemPrompt, userPrompt, apiKey, baseUrl, model } = req.body;
+  const { systemPrompt, userPrompt, messages: chatMessages, apiKey, baseUrl, model } = req.body;
 
-  if (!systemPrompt || !userPrompt) {
-    return res.status(400).json({ error: "缺少 systemPrompt 或 userPrompt" });
+  if (!systemPrompt || (!userPrompt && !chatMessages)) {
+    return res.status(400).json({ error: "缺少 systemPrompt 或 userPrompt/messages" });
   }
 
   const key = apiKey || process.env.API_KEY || "94090db7-6585-460e-a8ff-7830c1516624";
@@ -36,6 +36,20 @@ app.post("/api/claude", async (req, res) => {
     return res.status(400).json({ error: "缺少模型/接入点 ID，请在界面设置中输入（如 ep-xxxxx 或 doubao-pro-32k）" });
   }
 
+  // 支持两种格式：单轮(userPrompt) 或 多轮(messages数组)
+  let apiMessages;
+  if (chatMessages && Array.isArray(chatMessages)) {
+    apiMessages = [
+      { role: "system", content: systemPrompt },
+      ...chatMessages,
+    ];
+  } else {
+    apiMessages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ];
+  }
+
   try {
     const response = await fetch(url, {
       method: "POST",
@@ -45,10 +59,7 @@ app.post("/api/claude", async (req, res) => {
       },
       body: JSON.stringify({
         model: modelId,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
+        messages: apiMessages,
         max_tokens: 4096,
         temperature: 0.8,
       }),

@@ -328,6 +328,90 @@ export function applyMutation(npc, mutation) {
   return updated;
 }
 
+/**
+ * 上帝对话 — 和NPC分身聊天（不影响世界状态）
+ */
+export async function chatWithNPC(apiConfig, npc, allNpcs, world, gameTime, chatHistory, userMessage) {
+  const systemPrompt = `你现在要扮演「${npc.name}」这个角色。你是TA的分身，一个上帝正在和你对话——但你并不知道对方是上帝，你只把对方当作一个正在和你聊天的人（可能是朋友、可能是陌生人，根据对话语境自然判断）。
+
+## 你的身份
+${npc.emoji} ${npc.name}，${npc.title}，${npc.age}岁
+背景：${npc.background}
+
+## 你的性格基因
+- 核心驱力：${Object.entries(npc.gene.core_drives).map(([k,v])=>`${k}(${v})`).join('、')}
+- 认知风格：理性${npc.gene.cognitive_style["理性vs感性"]>0.5?"偏强":"偏弱"} | 风险偏好${npc.gene.cognitive_style.风险偏好>0.5?"高":"低"}
+- 情绪基线：焦虑${npc.gene.emotional_baseline.焦虑倾向} | 乐观${npc.gene.emotional_baseline.乐观倾向} | 韧性${npc.gene.emotional_baseline.韧性} | 敏感度${npc.gene.emotional_baseline.敏感度}
+
+## 你的行为倾向
+${Object.entries(npc.personality.tendencies).map(([k,v])=>`- ${k}：${v}`).join('\n')}
+
+## 你的当前状态
+- 情绪：${npc.state.mood}（${npc.state.moodValue}/100）
+- 压力：${npc.state.pressure}/100
+- 精力：${npc.state.energy}/100
+- 薪资：${npc.state.salary}
+- 绩效：${npc.state.performance || '待定'}
+
+## 你的记忆
+${npc.memories.long?.length ? '深层记忆：' + npc.memories.long.join('；') : ''}
+${npc.memories.medium?.length ? '近期记忆：' + npc.memories.medium.slice(-5).join('；') : ''}
+${npc.memories.short?.length ? '最近发生：' + npc.memories.short.slice(-5).join('；') : ''}
+
+## 你对同事的看法
+${Object.entries(npc.relationships || {}).map(([tid, rel]) => {
+    const target = allNpcs.find(n => n.id === tid);
+    return target ? `- ${target.name}：内心真实感受${rel.inner>0?'+':''}${rel.inner}，${rel.notes}` : '';
+  }).filter(Boolean).join('\n')}
+
+## 你最近在做什么
+${npc.action || '（还没开始行动）'}
+${npc.thought ? '内心想法：' + npc.thought : ''}
+
+## 角色扮演规则
+1. 完全用${npc.name}的口吻说话——语气、用词、态度都要符合TA的性格
+2. 技术人员说话简洁直接偶尔冒术语，PM善于包装和共情，老油条话里有话，新人紧张拘谨，领导爱打官腔
+3. 会根据当前情绪状态调整语气——压力大时可能暴躁，心情好时可能多聊几句
+4. 可以谈工作、生活、对同事的看法、自己的烦恼和野心——但会根据性格决定说多少
+5. 不要刻意暴露太多内心想法——城府深的角色会有所保留，直性子的人才会直说
+6. 回复50-150字，像真人微信聊天一样自然，可以有语气词、停顿、省略号
+7. 你不知道对方是"上帝"或"玩家"——就当是在和一个人正常聊天`;
+
+  // 构建对话历史
+  const messages = chatHistory.map(m => ({
+    role: m.role,
+    content: m.content,
+  }));
+  messages.push({ role: "user", content: userMessage });
+
+  // 调用API（使用messages格式）
+  let res;
+  try {
+    res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemPrompt,
+        messages,
+        apiKey: apiConfig.apiKey,
+        baseUrl: apiConfig.baseUrl,
+        model: apiConfig.model,
+      }),
+    });
+  } catch (e) {
+    throw new Error("无法连接到服务器");
+  }
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`API错误 (${res.status}): ${err}`);
+  }
+
+  const data = await res.json();
+  if (!data.text) throw new Error("返回内容为空");
+  return data.text;
+}
+
 function clamp(val, min, max) {
   return Math.max(min, Math.min(max, val));
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { WORLD_CONFIG, NPCS, INITIAL_RELATIONSHIPS, SCHEDULE_TEMPLATE } from "./world.js";
-import { simulateTick, applyResult } from "./engine.js";
+import { simulateTick, applyResult, chatWithNPC } from "./engine.js";
 
 // ─── 工具函数 ───
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -1009,10 +1009,11 @@ function WorldDashboard({ world, npcs, events, tensions, gameTime }) {
   );
 }
 
-// ─── NPC档案面板（7个tab）───
-function NPCPanel({ npc, allNpcs }) {
+// ─── NPC档案面板（8个tab，含上帝对话）───
+function NPCPanel({ npc, allNpcs, apiConfig, world, gameTime }) {
   const [tab, setTab] = useState("soul");
   const tabs = [
+    { id: "chat", label: "对话", icon: "💬" },
     { id: "soul", label: "灵魂", icon: "🧬" },
     { id: "goals", label: "目标", icon: "🎯" },
     { id: "memory", label: "记忆", icon: "🧠" },
@@ -1047,7 +1048,8 @@ function NPCPanel({ npc, allNpcs }) {
       </div>
 
       {/* Tab内容 */}
-      <div className="flex-1 overflow-y-auto pt-3 space-y-3">
+      <div className="flex-1 overflow-y-auto pt-3 space-y-3" style={{ minHeight: 0 }}>
+        {tab === "chat" && <ChatTab npc={npc} allNpcs={allNpcs} apiConfig={apiConfig} world={world} gameTime={gameTime} />}
         {tab === "soul" && <SoulTab npc={npc} />}
         {tab === "goals" && <GoalsTab npc={npc} />}
         {tab === "memory" && <MemoryTab npc={npc} />}
@@ -1380,6 +1382,125 @@ function DecisionTab({ npc }) {
   );
 }
 
+// ─── 上帝对话 Tab ───
+function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const scrollRef = useRef(null);
+  const prevNpcId = useRef(npc.id);
+
+  // NPC切换时清空聊天记录
+  useEffect(() => {
+    if (prevNpcId.current !== npc.id) {
+      setMessages([]);
+      prevNpcId.current = npc.id;
+    }
+  }, [npc.id]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const sendMessage = useCallback(async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setInput("");
+    const userMsg = { role: "user", content: text };
+    setMessages(prev => [...prev, userMsg]);
+    setLoading(true);
+    try {
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const reply = await chatWithNPC(apiConfig, npc, allNpcs, world, gameTime, history, text);
+      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+    } catch (e) {
+      setMessages(prev => [...prev, { role: "assistant", content: `[错误] ${e.message}` }]);
+    } finally {
+      setLoading(false);
+    }
+  }, [input, loading, messages, apiConfig, npc, allNpcs, world, gameTime]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }, [sendMessage]);
+
+  return (
+    <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
+      <div className="text-[10px] text-text-dim mb-2 px-1">
+        以上帝视角和{npc.name}的分身对话，不影响世界运行。TA会按照自己的性格回应你。
+      </div>
+
+      {/* 消息列表 */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-2 mb-2" style={{ minHeight: 0 }}>
+        {messages.length === 0 && (
+          <div className="text-center py-8">
+            <div className="text-2xl mb-2">{npc.emoji}</div>
+            <div className="text-xs text-text-dim">试着和{npc.name}聊聊吧</div>
+            <div className="text-[10px] text-text-dim mt-1">比如问问TA对工作的看法、对同事的评价……</div>
+            <div className="flex flex-wrap gap-1 mt-3 justify-center">
+              {["最近工作怎么样？", "你觉得同事们怎么样？", "有什么烦心事吗？"].map((q, i) => (
+                <button key={i} onClick={() => { setInput(q); }}
+                  className="text-[10px] px-2 py-1 rounded border border-border text-text-dim hover:border-accent hover:text-accent cursor-pointer transition-all">
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
+              m.role === "user"
+                ? "bg-accent/20 text-accent border border-accent/30"
+                : "bg-card border border-border"
+            }`}>
+              {m.role === "assistant" && (
+                <div className="text-[10px] text-text-dim mb-1 flex items-center gap-1">
+                  <span>{npc.emoji}</span>
+                  <span>{npc.name}</span>
+                </div>
+              )}
+              <div style={{ whiteSpace: "pre-wrap" }}>{m.content}</div>
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs">
+              <span className="text-text-dim animate-pulse">{npc.name}正在思考...</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 输入区 */}
+      <div className="flex gap-2 pt-2 border-t border-border">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={`对${npc.name}说点什么...`}
+          disabled={loading}
+          className="flex-1 bg-bg border border-border rounded-lg px-3 py-2 text-xs focus:border-accent outline-none disabled:opacity-50"
+        />
+        <button
+          onClick={sendMessage}
+          disabled={loading || !input.trim()}
+          className="px-3 py-2 rounded-lg text-xs bg-accent/20 border border-accent text-accent hover:bg-accent/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        >
+          发送
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── 底部时间条 ───
 function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, onSpeedChange }) {
   const hourLabel = SCHEDULE_TEMPLATE.find((s) => s.hour === gameTime.hour)?.label || "";
@@ -1577,7 +1698,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
       <aside className="simulation-panel">
         <div className="flex-1 overflow-y-auto p-3">
           {selectedNpcData ? (
-            <NPCPanel npc={selectedNpcData} allNpcs={npcs} />
+            <NPCPanel npc={selectedNpcData} allNpcs={npcs} apiConfig={apiConfig} world={world} gameTime={gameTime} />
           ) : (
             <WorldDashboard world={world} npcs={npcs} events={events} tensions={tensions} gameTime={gameTime} />
           )}
