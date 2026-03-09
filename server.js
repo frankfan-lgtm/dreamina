@@ -7,7 +7,7 @@ import { dirname, join } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = 3456;
+const PORT = 3457;
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(join(__dirname, "dist")));
