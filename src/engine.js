@@ -179,17 +179,24 @@ export function buildPrompt(world, npcs, gameTime, intervention) {
  * 调用 API
  */
 export async function callAPI(apiConfig, systemPrompt, userPrompt) {
-  const res = await fetch("/api/claude", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemPrompt,
-      userPrompt,
-      apiKey: apiConfig.apiKey,
-      baseUrl: apiConfig.baseUrl,
-      model: apiConfig.model,
-    }),
-  });
+  let res;
+  try {
+    res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemPrompt,
+        userPrompt,
+        apiKey: apiConfig.apiKey,
+        baseUrl: apiConfig.baseUrl,
+        model: apiConfig.model,
+      }),
+    });
+  } catch (e) {
+    throw new Error(
+      "无法连接到服务器。请确认已在终端运行 node server.js，然后通过 http://localhost:3456 访问（不要直接打开 html 文件）"
+    );
+  }
 
   if (!res.ok) {
     const err = await res.text();
