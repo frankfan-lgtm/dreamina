@@ -5,4 +5,9 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), viteSingleFile()],
+  server: {
+    proxy: {
+      "/api": "http://localhost:3456",
+    },
+  },
 });
