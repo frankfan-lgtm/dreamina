@@ -465,7 +465,7 @@ function ApiSetupScreen({ config, onSave }) {
   const [baseUrl, setBaseUrl] = useState(
     config.baseUrl || "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
   );
-  const [model, setModel] = useState(config.model || "");
+  const [model, setModel] = useState(config.model || "doubao-seed-2-0-pro-260215");
 
   const canSave = apiKey.trim() && model.trim();
 
@@ -493,10 +493,10 @@ function ApiSetupScreen({ config, onSave }) {
             type="text"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            placeholder="如 ep-20250xxx 或 doubao-1-5-pro-32k"
+            placeholder="如 doubao-seed-2-0-pro-260215"
             className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:border-accent outline-none"
           />
-          <p className="text-xs text-text-dim mt-1">火山引擎控制台 → 模型推理 → 接入点管理中获取</p>
+          <p className="text-xs text-text-dim mt-1">如 doubao-seed-2-0-pro-260215</p>
         </div>
 
         <div>
