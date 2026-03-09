@@ -23,79 +23,88 @@ function barStr(val, max = 100) {
   return `${pct}%`;
 }
 
-// ─── 像素精灵系统（Pokemon overworld 风格）───
-// 调色板: H=发色 h=发色亮 S=肤色 s=肤色暗 T=上衣 t=上衣暗 P=裤子 p=裤子暗 E=眼睛 W=眼白
-// '.' = 透明, 自动描边生成轮廓线
+// ─── 像素精灵系统（Pokemon GBA overworld 风格）───
+// 12x18 高精度模板，自动描边生成黑色轮廓线
+// H=发色 h=发色亮 S=肤色 s=肤色暗 M=嘴 W=眼白 E=眼瞳
+// T=上衣 t=上衣暗 P=裤子 p=裤子暗 B=腰带 A=肤色(长发侧)
 
-const MALE_BODY = [ // 短发男性模板 (9x15)
-  "...HHH...",
-  "..HHhHH..",
-  "..HHHHH..",
-  ".SSSSSSS.",
-  ".S.SSS.S.",
-  "..sSSss..",
-  "...SS....",
-  "..tTTTt..",
-  ".TTTTTTT.",
-  ".sTTTTTs.",
-  "..TtTtT..",
-  "..PPPPP..",
-  "..PP.PP..",
-  "..pp.pp..",
+const MALE_BODY = [ // 短发男性 12x18
+  "....HHH.....",
+  "...HHHHH....",
+  "..HHHhHHH...",
+  "..HHHHHHH...",
+  "..SSSSSSS...",
+  "..SWESEWS...",
+  "..sSSMSSs...",
+  "...SSSSS....",
+  "....SSS.....",
+  "...tTTTt....",
+  "..tTTTTTt...",
+  "..TTTTTTT...",
+  ".sTTTTTTTs..",
+  "..sTtTtTs...",
+  "...BBBBB....",
+  "...PPPPP....",
+  "...PP.PP....",
+  "...pp.pp....",
 ];
 
-const FEMALE_BODY = [ // 长发女性模板 (9x15)
-  "..hHHHh..",
-  ".hHHHHHh.",
-  ".HHHHHHH.",
-  "HHSSSSSAH",
-  "HHS.S.SAH",
-  ".HsSSSs..",
-  "..HSS.H..",
-  "..tTTTt..",
-  ".TTTTTTT.",
-  ".sTTTTTs.",
-  "..TtTtT..",
-  "..PPPPP..",
-  "..PP.PP..",
-  "..pp.pp..",
+const FEMALE_BODY = [ // 长发女性 12x18
+  "...hHHHh....",
+  "..hHHhHHh...",
+  ".hHHHHHHHh..",
+  ".HHHHHHHHH..",
+  ".HHSSSSSHH..",
+  ".HSWESEWSH..",
+  ".HsSSMSSsH..",
+  "..HSSSSSH...",
+  "...HSSH.....",
+  "...tTTTt....",
+  "..tTTTTTt...",
+  "..TTTTTTT...",
+  ".sTTTTTTTs..",
+  "..sTtTtTs...",
+  "...BBBBB....",
+  "...PPPPP....",
+  "...PP.PP....",
+  "...pp.pp....",
 ];
 
 const SPRITE_COLORS = {
-  zhangwei: { // 程序员 - 蓝衣
-    H: "#2a2a4a", h: "#3a3a5a", S: "#f0c8a0", s: "#d8b090",
-    T: "#4488cc", t: "#3366aa", P: "#2a3a5a", p: "#1a2a40",
-    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+  zhangwei: { // 程序员 - 蓝色卫衣
+    H: "#2a2a4a", h: "#404060", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#4488cc", t: "#3366aa", P: "#2a3a5a", p: "#1a2a40", B: "#223050",
+    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "male",
   },
-  linting: { // PM - 红衣长发
-    H: "#5a2020", h: "#7a3030", S: "#f0c8a0", s: "#d8b090",
-    T: "#cc4444", t: "#aa3333", P: "#4a3050", p: "#3a2040",
-    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+  linting: { // PM - 红色衬衫
+    H: "#5a2020", h: "#7a3535", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#cc4444", t: "#aa3333", P: "#4a3050", p: "#3a2040", B: "#3a2040",
+    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "female",
   },
   zhaopeng: { // 领导 - 深色西装
-    H: "#1a1a2a", h: "#2a2a3a", S: "#e8c098", s: "#d0a880",
-    T: "#2a2a3a", t: "#1a1a2a", P: "#1a1a2a", p: "#101018",
-    E: "#1a1520", W: "#e0e0e0", A: "#e8c098",
+    H: "#1a1a28", h: "#28283a", S: "#e8c098", s: "#d0a880", M: "#d09878",
+    T: "#2a2a3a", t: "#1a1a28", P: "#1a1a28", p: "#101018", B: "#4a4040",
+    E: "#12101a", W: "#e8e8e0", A: "#e8c098",
     body: "male",
   },
-  liufang: { // 新人 - 绿衣齐刘海
-    H: "#5a3828", h: "#7a4838", S: "#f0c8a0", s: "#d8b090",
-    T: "#50a860", t: "#408848", P: "#3a4a5a", p: "#2a3a4a",
-    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+  liufang: { // 新人 - 绿色T恤
+    H: "#5a3828", h: "#7a4838", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#50a860", t: "#408848", P: "#3a4a5a", p: "#2a3a4a", B: "#304048",
+    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "female",
   },
-  chenxi: { // 设计师 - 紫衣
-    H: "#3a2a40", h: "#4a3a50", S: "#f0c8a0", s: "#d8b090",
-    T: "#8060b0", t: "#604890", P: "#3a3050", p: "#2a2040",
-    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+  chenxi: { // 设计师 - 紫色连帽衫
+    H: "#3a2a42", h: "#4a3a55", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#8060b0", t: "#604890", P: "#3a3050", p: "#2a2040", B: "#2a2838",
+    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "male",
   },
-  wangli: { // HR - 橙衣长发
-    H: "#6a3820", h: "#8a4830", S: "#f0c8a0", s: "#d8b090",
-    T: "#c08850", t: "#a07040", P: "#4a3a50", p: "#3a2a40",
-    E: "#1a1520", W: "#ffffff", A: "#f0c8a0",
+  wangli: { // HR - 橙色针织衫
+    H: "#6a3820", h: "#8a5030", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
+    T: "#c08850", t: "#a07040", P: "#4a3a50", p: "#3a2a40", B: "#3a2838",
+    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
     body: "female",
   },
 };
@@ -126,7 +135,7 @@ function buildSpriteShadows(npcId, size) {
       if (grid[y][x]) {
         shadows.push(`${x * size}px ${y * size}px 0 ${grid[y][x]}`);
       } else {
-        // Auto-outline: transparent pixel adjacent to colored pixel
+        // Auto-outline: transparent pixel adjacent to colored pixel → dark border
         let near = false;
         for (let dy = -1; dy <= 1 && !near; dy++) {
           for (let dx = -1; dx <= 1 && !near; dx++) {
