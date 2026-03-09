@@ -7,6 +7,10 @@ const app = express();
 const PORT = 3456;
 
 app.use(express.json({ limit: "1mb" }));
+app.use((req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 app.use(express.static(join(__dirname, "dist")));
 
 app.post("/api/claude", async (req, res) => {
