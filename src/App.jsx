@@ -281,6 +281,388 @@ function drawBorder(ctx, x, y, w, h) {
   ctx.fillStyle='#16162a'; ctx.fillRect(x,y+h-3,w,3); ctx.fillRect(x+w-3,y,3,h);
 }
 
+// ─── 房间家具绘制系统（俯视图像素画）───
+// 每个房间根据类型绘制不同的家具和装饰物
+
+function drawRoomFurniture(ctx, x, y, w, h, roomId, isZoomed) {
+  const s = isZoomed ? 2 : 1; // 缩放系数
+
+  switch (roomId) {
+    case 'desk': drawDeskRoom(ctx, x, y, w, h, s); break;
+    case 'meeting': drawMeetingRoom(ctx, x, y, w, h, s); break;
+    case 'pantry': drawPantryRoom(ctx, x, y, w, h, s); break;
+    case 'boss': drawBossRoom(ctx, x, y, w, h, s); break;
+    case 'canteen': drawCanteenRoom(ctx, x, y, w, h, s); break;
+    case 'home': drawHomeRoom(ctx, x, y, w, h, s); break;
+  }
+}
+
+// 工位区：电脑桌椅排列
+function drawDeskRoom(ctx, x, y, w, h, s) {
+  const deskW = 28*s, deskH = 16*s, gap = 8*s;
+  const rows = Math.max(1, Math.floor((h - 30*s) / (deskH + gap + 12*s)));
+  const cols = Math.max(1, Math.floor((w - 16*s) / (deskW + gap)));
+  const startX = x + (w - cols * (deskW + gap) + gap) / 2;
+  const startY = y + 20*s;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const dx = startX + c * (deskW + gap);
+      const dy = startY + r * (deskH + gap + 12*s);
+      // 桌面
+      ctx.fillStyle = '#5a4a38';
+      ctx.fillRect(dx, dy, deskW, deskH);
+      ctx.fillStyle = '#4a3a28';
+      ctx.fillRect(dx+1*s, dy+1*s, deskW-2*s, 2*s); // 桌面高光
+      // 显示器（俯视图 = 薄长条）
+      ctx.fillStyle = '#1a1a2a';
+      ctx.fillRect(dx + 3*s, dy + 2*s, 14*s, 3*s);
+      ctx.fillStyle = '#3a5a8a';
+      ctx.fillRect(dx + 4*s, dy + 2*s, 12*s, 2*s); // 屏幕光
+      // 键盘
+      ctx.fillStyle = '#2a2a3a';
+      ctx.fillRect(dx + 4*s, dy + 7*s, 10*s, 4*s);
+      // 鼠标
+      ctx.fillStyle = '#3a3a4a';
+      ctx.fillRect(dx + 16*s, dy + 8*s, 3*s, 4*s);
+      // 椅子（桌下方）
+      ctx.fillStyle = '#3a3a4a';
+      ctx.fillRect(dx + 7*s, dy + deskH + 1*s, 12*s, 8*s);
+      ctx.fillStyle = '#2a2a38';
+      ctx.fillRect(dx + 9*s, dy + deskH + 2*s, 8*s, 6*s);
+      // 椅子轮子小点
+      ctx.fillStyle = '#222230';
+      ctx.fillRect(dx + 8*s, dy + deskH + 8*s, 2*s, 2*s);
+      ctx.fillRect(dx + 18*s, dy + deskH + 8*s, 2*s, 2*s);
+    }
+  }
+
+  // 绿植装饰（角落）
+  ctx.fillStyle = '#2a4a2a';
+  ctx.fillRect(x + w - 14*s, y + h - 14*s, 10*s, 10*s);
+  ctx.fillStyle = '#3a6a3a';
+  ctx.fillRect(x + w - 12*s, y + h - 12*s, 6*s, 6*s);
+  ctx.fillStyle = '#5a3a28';
+  ctx.fillRect(x + w - 10*s, y + h - 6*s, 4*s, 4*s); // 花盆
+}
+
+// 会议室：长桌 + 白板
+function drawMeetingRoom(ctx, x, y, w, h, s) {
+  // 长会议桌
+  const tw = Math.min(w * 0.6, 80*s);
+  const th = Math.min(h * 0.35, 40*s);
+  const tx = x + (w - tw) / 2;
+  const ty = y + (h - th) / 2 + 4*s;
+  ctx.fillStyle = '#5a4838';
+  ctx.fillRect(tx, ty, tw, th);
+  ctx.fillStyle = '#6a5848';
+  ctx.fillRect(tx + 2*s, ty + 2*s, tw - 4*s, th - 4*s); // 桌面亮面
+  // 桌腿
+  ctx.fillStyle = '#3a2a1a';
+  ctx.fillRect(tx + 2*s, ty + 2*s, 3*s, 3*s);
+  ctx.fillRect(tx + tw - 5*s, ty + 2*s, 3*s, 3*s);
+  ctx.fillRect(tx + 2*s, ty + th - 5*s, 3*s, 3*s);
+  ctx.fillRect(tx + tw - 5*s, ty + th - 5*s, 3*s, 3*s);
+
+  // 椅子围绕桌子
+  const chairS = 6*s;
+  const chairCount = Math.max(2, Math.floor(tw / (chairS + 6*s)));
+  for (let i = 0; i < chairCount; i++) {
+    const cx = tx + 4*s + i * (tw - 8*s) / Math.max(1, chairCount - 1) - chairS/2;
+    // 上方椅子
+    ctx.fillStyle = '#3a3a4a';
+    ctx.fillRect(cx, ty - chairS - 3*s, chairS, chairS);
+    ctx.fillStyle = '#4a4a5a';
+    ctx.fillRect(cx + 1*s, ty - chairS - 2*s, chairS - 2*s, chairS - 2*s);
+    // 下方椅子
+    ctx.fillStyle = '#3a3a4a';
+    ctx.fillRect(cx, ty + th + 3*s, chairS, chairS);
+    ctx.fillStyle = '#4a4a5a';
+    ctx.fillRect(cx + 1*s, ty + th + 4*s, chairS - 2*s, chairS - 2*s);
+  }
+
+  // 白板（上方墙壁）
+  ctx.fillStyle = '#e8e0d8';
+  ctx.fillRect(x + w * 0.25, y + 6*s, w * 0.5, 12*s);
+  ctx.fillStyle = '#d0c8c0';
+  ctx.fillRect(x + w * 0.25 + 2*s, y + 8*s, w * 0.5 - 4*s, 8*s);
+  // 白板上的文字线条
+  ctx.fillStyle = '#a0a0b0';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(x + w * 0.3, y + 9*s + i * 3*s, w * 0.25 - i * 6*s, 1*s);
+  }
+
+  // 投影仪（顶部中央小方块）
+  ctx.fillStyle = '#2a2a3a';
+  ctx.fillRect(x + w/2 - 4*s, y + 2*s, 8*s, 4*s);
+}
+
+// 茶水间：咖啡机 + 吧台 + 冰箱
+function drawPantryRoom(ctx, x, y, w, h, s) {
+  // 吧台/料理台（上方）
+  ctx.fillStyle = '#5a5048';
+  ctx.fillRect(x + 6*s, y + 6*s, w - 12*s, 12*s);
+  ctx.fillStyle = '#6a6058';
+  ctx.fillRect(x + 8*s, y + 7*s, w - 16*s, 10*s);
+
+  // 咖啡机
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillRect(x + 10*s, y + 7*s, 8*s, 8*s);
+  ctx.fillStyle = '#8a4a2a';
+  ctx.fillRect(x + 12*s, y + 8*s, 4*s, 3*s); // 咖啡色
+  ctx.fillStyle = '#aa2222';
+  ctx.fillRect(x + 11*s, y + 12*s, 2*s, 2*s); // 按钮
+
+  // 水壶
+  ctx.fillStyle = '#c0c0d0';
+  ctx.fillRect(x + 22*s, y + 8*s, 6*s, 6*s);
+  ctx.fillStyle = '#e0e0e8';
+  ctx.fillRect(x + 23*s, y + 9*s, 4*s, 4*s);
+
+  // 微波炉
+  ctx.fillStyle = '#3a3a3a';
+  ctx.fillRect(x + w - 22*s, y + 7*s, 12*s, 8*s);
+  ctx.fillStyle = '#1a3a4a';
+  ctx.fillRect(x + w - 20*s, y + 8*s, 7*s, 6*s);
+
+  // 冰箱（右下）
+  ctx.fillStyle = '#c0c8d0';
+  ctx.fillRect(x + w - 16*s, y + h - 22*s, 12*s, 18*s);
+  ctx.fillStyle = '#b0b8c0';
+  ctx.fillRect(x + w - 14*s, y + h - 20*s, 8*s, 7*s);
+  ctx.fillStyle = '#a0a8b0';
+  ctx.fillRect(x + w - 14*s, y + h - 12*s, 8*s, 7*s);
+  // 冰箱把手
+  ctx.fillStyle = '#808890';
+  ctx.fillRect(x + w - 6*s, y + h - 18*s, 2*s, 4*s);
+  ctx.fillRect(x + w - 6*s, y + h - 10*s, 2*s, 4*s);
+
+  // 圆桌（中央）
+  ctx.fillStyle = '#5a4a38';
+  const cx2 = x + w/2, cy2 = y + h/2 + 4*s;
+  ctx.beginPath();
+  ctx.arc(cx2, cy2, 10*s, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#6a5a48';
+  ctx.beginPath();
+  ctx.arc(cx2, cy2, 8*s, 0, Math.PI*2);
+  ctx.fill();
+
+  // 杯子（桌上）
+  ctx.fillStyle = '#e0d8c8';
+  ctx.fillRect(cx2 - 3*s, cy2 - 2*s, 3*s, 3*s);
+  ctx.fillRect(cx2 + 2*s, cy2 + 1*s, 3*s, 3*s);
+}
+
+// 领导办公室：大桌 + 书柜 + 沙发
+function drawBossRoom(ctx, x, y, w, h, s) {
+  // 大办公桌（中上）
+  const dw = Math.min(w * 0.5, 50*s), dh = 20*s;
+  const dx = x + (w - dw) / 2;
+  const dy = y + 14*s;
+  ctx.fillStyle = '#5a3828';
+  ctx.fillRect(dx, dy, dw, dh);
+  ctx.fillStyle = '#6a4838';
+  ctx.fillRect(dx + 2*s, dy + 2*s, dw - 4*s, dh - 4*s);
+
+  // 显示器
+  ctx.fillStyle = '#1a1a2a';
+  ctx.fillRect(dx + dw/2 - 8*s, dy + 3*s, 16*s, 4*s);
+  ctx.fillStyle = '#3a5a8a';
+  ctx.fillRect(dx + dw/2 - 7*s, dy + 3*s, 14*s, 3*s);
+
+  // 文件堆
+  ctx.fillStyle = '#e8e0d0';
+  ctx.fillRect(dx + 4*s, dy + 4*s, 6*s, 8*s);
+  ctx.fillStyle = '#d8d0c0';
+  ctx.fillRect(dx + 5*s, dy + 5*s, 5*s, 3*s);
+
+  // 老板椅（大椅子）
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillRect(dx + dw/2 - 8*s, dy + dh + 2*s, 16*s, 12*s);
+  ctx.fillStyle = '#3a2828';
+  ctx.fillRect(dx + dw/2 - 6*s, dy + dh + 3*s, 12*s, 10*s);
+
+  // 书柜（左墙）
+  ctx.fillStyle = '#4a3828';
+  ctx.fillRect(x + 4*s, y + 6*s, 10*s, h - 12*s);
+  ctx.fillStyle = '#3a2818';
+  // 书柜隔板
+  for (let i = 0; i < 4; i++) {
+    const sy = y + 10*s + i * ((h - 20*s) / 4);
+    ctx.fillRect(x + 4*s, sy, 10*s, 1*s);
+    // 书本
+    const bookColors = ['#8a3030','#306a8a','#6a8a30','#8a6a30'];
+    ctx.fillStyle = bookColors[i % bookColors.length];
+    ctx.fillRect(x + 5*s, sy + 2*s, 3*s, (h - 20*s) / 4 - 4*s);
+    ctx.fillStyle = bookColors[(i+1) % bookColors.length];
+    ctx.fillRect(x + 9*s, sy + 2*s, 2*s, (h - 20*s) / 4 - 4*s);
+  }
+
+  // 来访沙发（右下）
+  ctx.fillStyle = '#3a3a4a';
+  ctx.fillRect(x + w - 20*s, y + h - 16*s, 16*s, 10*s);
+  ctx.fillStyle = '#4a4a5a';
+  ctx.fillRect(x + w - 18*s, y + h - 14*s, 12*s, 6*s);
+
+  // 绿植
+  ctx.fillStyle = '#2a5a2a';
+  ctx.fillRect(x + w - 12*s, y + 8*s, 8*s, 8*s);
+  ctx.fillStyle = '#3a7a3a';
+  ctx.fillRect(x + w - 10*s, y + 10*s, 4*s, 4*s);
+}
+
+// 食堂：餐桌 + 餐盘 + 打饭台
+function drawCanteenRoom(ctx, x, y, w, h, s) {
+  // 打饭台（上方）
+  ctx.fillStyle = '#707068';
+  ctx.fillRect(x + 6*s, y + 6*s, w - 12*s, 10*s);
+  ctx.fillStyle = '#808078';
+  ctx.fillRect(x + 8*s, y + 7*s, w - 16*s, 8*s);
+  // 菜盆
+  const dishes = ['#cc6633','#66aa44','#ddaa33','#aa4433','#44aa88'];
+  const dw2 = Math.min(10*s, (w - 24*s) / dishes.length);
+  for (let i = 0; i < dishes.length; i++) {
+    const dx = x + 12*s + i * (dw2 + 2*s);
+    ctx.fillStyle = '#c0c0b0';
+    ctx.fillRect(dx, y + 8*s, dw2, 5*s);
+    ctx.fillStyle = dishes[i];
+    ctx.fillRect(dx + 1*s, y + 9*s, dw2 - 2*s, 3*s);
+  }
+
+  // 餐桌（2-3排）
+  const tableRows = Math.max(1, Math.floor((h - 30*s) / (24*s)));
+  const tableCols = Math.max(1, Math.floor((w - 16*s) / (36*s)));
+  for (let r = 0; r < tableRows; r++) {
+    for (let c = 0; c < tableCols; c++) {
+      const tx = x + 10*s + c * 36*s;
+      const ty = y + 22*s + r * 24*s;
+      // 桌子
+      ctx.fillStyle = '#6a6058';
+      ctx.fillRect(tx, ty, 28*s, 12*s);
+      ctx.fillStyle = '#7a7068';
+      ctx.fillRect(tx + 1*s, ty + 1*s, 26*s, 10*s);
+      // 餐盘（圆形）
+      ctx.fillStyle = '#e0d8d0';
+      ctx.beginPath(); ctx.arc(tx + 7*s, ty + 6*s, 3*s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(tx + 21*s, ty + 6*s, 3*s, 0, Math.PI*2); ctx.fill();
+      // 筷子
+      ctx.fillStyle = '#8a6a40';
+      ctx.fillRect(tx + 10*s, ty + 4*s, 1*s, 5*s);
+      ctx.fillRect(tx + 12*s, ty + 4*s, 1*s, 5*s);
+      // 凳子
+      ctx.fillStyle = '#4a4a4a';
+      ctx.fillRect(tx + 3*s, ty - 5*s, 6*s, 4*s);
+      ctx.fillRect(tx + 19*s, ty - 5*s, 6*s, 4*s);
+      ctx.fillRect(tx + 3*s, ty + 13*s, 6*s, 4*s);
+      ctx.fillRect(tx + 19*s, ty + 13*s, 6*s, 4*s);
+    }
+  }
+}
+
+// 家：床 + 桌 + 沙发 + 电视
+function drawHomeRoom(ctx, x, y, w, h, s) {
+  // 床（左上）
+  ctx.fillStyle = '#4a3a30';
+  ctx.fillRect(x + 6*s, y + 6*s, 24*s, 30*s);
+  ctx.fillStyle = '#6888a8';
+  ctx.fillRect(x + 7*s, y + 7*s, 22*s, 6*s); // 枕头
+  ctx.fillStyle = '#7898b8';
+  ctx.fillRect(x + 8*s, y + 8*s, 9*s, 4*s);
+  ctx.fillRect(x + 19*s, y + 8*s, 9*s, 4*s);
+  ctx.fillStyle = '#5878a0';
+  ctx.fillRect(x + 7*s, y + 14*s, 22*s, 20*s); // 被子
+  ctx.fillStyle = '#4a6890';
+  ctx.fillRect(x + 9*s, y + 16*s, 18*s, 16*s);
+
+  // 书桌（右上）
+  ctx.fillStyle = '#5a4a38';
+  ctx.fillRect(x + w - 26*s, y + 6*s, 20*s, 12*s);
+  ctx.fillStyle = '#6a5a48';
+  ctx.fillRect(x + w - 24*s, y + 7*s, 16*s, 10*s);
+  // 笔记本电脑
+  ctx.fillStyle = '#2a2a3a';
+  ctx.fillRect(x + w - 22*s, y + 8*s, 10*s, 7*s);
+  ctx.fillStyle = '#3a5a7a';
+  ctx.fillRect(x + w - 21*s, y + 9*s, 8*s, 4*s);
+
+  // 沙发（下方）
+  ctx.fillStyle = '#5a4a5a';
+  ctx.fillRect(x + 8*s, y + h - 18*s, 30*s, 12*s);
+  ctx.fillStyle = '#6a5a6a';
+  ctx.fillRect(x + 10*s, y + h - 16*s, 26*s, 8*s);
+  // 靠垫
+  ctx.fillStyle = '#8a6a5a';
+  ctx.fillRect(x + 11*s, y + h - 15*s, 6*s, 6*s);
+  ctx.fillRect(x + 29*s, y + h - 15*s, 6*s, 6*s);
+
+  // 电视/茶几
+  ctx.fillStyle = '#3a3a3a';
+  ctx.fillRect(x + w - 18*s, y + h - 16*s, 14*s, 2*s);
+  ctx.fillStyle = '#1a1a2a';
+  ctx.fillRect(x + w - 16*s, y + h - 28*s, 10*s, 10*s);
+  ctx.fillStyle = '#2a4a6a';
+  ctx.fillRect(x + w - 15*s, y + h - 27*s, 8*s, 8*s);
+
+  // 地毯
+  ctx.fillStyle = 'rgba(120,80,80,0.2)';
+  ctx.fillRect(x + w/2 - 15*s, y + h/2, 30*s, 20*s);
+
+  // 拖鞋（门口/下方）
+  ctx.fillStyle = '#c08850';
+  ctx.fillRect(x + w/2 - 6*s, y + h - 6*s, 4*s, 3*s);
+  ctx.fillRect(x + w/2 + 2*s, y + h - 6*s, 4*s, 3*s);
+}
+
+// ─── NPC 移动位置系统 ───
+// 为每个NPC维护一个目标位置和当前位置，实现平滑走动
+const npcPositions = {}; // { npcId: { x, y, targetX, targetY, lastMove } }
+const NPC_MOVE_INTERVAL = 3000; // 每3秒换一个目标位置
+const NPC_MOVE_SPEED = 0.04; // 每帧移动比例
+
+function getNpcPosition(npcId, roomX, roomY, roomW, roomH, bw, labelH, spriteW, spriteH, time) {
+  const margin = bw + 4;
+  const minX = roomX + margin + 2;
+  const maxX = roomX + roomW - margin - spriteW - 2;
+  const minY = roomY + margin + labelH + 2;
+  const maxY = roomY + roomH - margin - spriteH - 14;
+
+  if (!npcPositions[npcId]) {
+    npcPositions[npcId] = {
+      x: minX + Math.random() * Math.max(1, maxX - minX),
+      y: minY + Math.random() * Math.max(1, maxY - minY),
+      targetX: 0, targetY: 0,
+      lastMove: time - Math.random() * NPC_MOVE_INTERVAL,
+    };
+    npcPositions[npcId].targetX = npcPositions[npcId].x;
+    npcPositions[npcId].targetY = npcPositions[npcId].y;
+  }
+
+  const pos = npcPositions[npcId];
+
+  // 更新目标位置
+  if (time - pos.lastMove > NPC_MOVE_INTERVAL) {
+    pos.targetX = minX + Math.random() * Math.max(1, maxX - minX);
+    pos.targetY = minY + Math.random() * Math.max(1, maxY - minY);
+    pos.lastMove = time;
+  }
+
+  // 平滑移动
+  pos.x += (pos.targetX - pos.x) * NPC_MOVE_SPEED;
+  pos.y += (pos.targetY - pos.y) * NPC_MOVE_SPEED;
+
+  // 确保在边界内
+  pos.x = Math.max(minX, Math.min(maxX, pos.x));
+  pos.y = Math.max(minY, Math.min(maxY, pos.y));
+
+  return { x: pos.x, y: pos.y };
+}
+
+// 当NPC切换房间时，重置位置
+function resetNpcPosition(npcId) {
+  delete npcPositions[npcId];
+}
+
 // Main Canvas Map component with zoom
 function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
   const canvasRef = useRef(null);
@@ -329,6 +711,8 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         const present = ns.filter(n=>n.region===loc.id);
         const rx=pad, ry=pad, rw=cw-2*pad, rh=ch-2*pad;
         drawFloor(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.color);
+        // 绘制家具
+        drawRoomFurniture(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.id, true);
         drawBorder(ctx, rx, ry, rw, rh);
 
         // Label
@@ -342,17 +726,14 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         ctx.fillStyle='#c08850'; ctx.font='11px monospace';
         ctx.fillText('◀ 返回', bbx+6, bby+4);
 
-        // NPCs large
+        // NPCs large - 使用走动系统
         const sc=5, sw=12*sc, sh=18*sc;
-        const fy=ry+bw+labelH+8;
         const nRects=[];
-        const cols = Math.max(3, Math.ceil(Math.sqrt(present.length+1)));
-        const cellW = (rw-2*bw-20)/cols;
         present.forEach((npc,i)=>{
-          const col=i%cols, row=Math.floor(i/cols);
-          const nx = rx+bw+10+col*cellW+(cellW-sw)/2;
-          const floatY = Math.sin(t/600+i*1.7)*4;
-          const ny = fy+row*(sh+30)+floatY;
+          const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh, t);
+          const nx = pos.x;
+          const floatY = Math.sin(t/600+i*1.7)*2;
+          const ny = pos.y + floatY;
           // Shadow
           ctx.fillStyle='rgba(0,0,0,0.3)';
           ctx.beginPath(); ctx.ellipse(nx+sw/2, ny+sh+3, sw*0.4, 5, 0, 0, Math.PI*2); ctx.fill();
@@ -375,7 +756,7 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           // Thought bubble
           if (npc.thought||npc.action) {
             const txt = npc.thought || npc.action;
-            const display = txt.length>10 ? txt.slice(0,10)+'..' : txt;
+            const display = txt.length>14 ? txt.slice(0,14)+'..' : txt;
             ctx.font='10px monospace';
             const tw = ctx.measureText(display).width+8;
             const bx2=nx+sw/2-tw/2, by2=ny-18;
@@ -406,6 +787,8 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           const col=i%cols, row=Math.floor(i/cols);
           const rx=pad+col*(rw+gap), ry=pad+row*(rh+gap);
           drawFloor(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.color);
+          // 绘制家具（缩略图版本）
+          drawRoomFurniture(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.id, false);
           drawBorder(ctx, rx, ry, rw, rh);
           // Label
           ctx.fillStyle='#b8b0a8'; ctx.font='11px monospace'; ctx.textBaseline='top';
@@ -416,14 +799,13 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           ctx.fillStyle=present.length>0?'#c08850':'#58506a';
           ctx.font='10px monospace'; ctx.textAlign='center';
           ctx.fillText(String(present.length), rx+rw-bw-11, ry+bw+4); ctx.textAlign='left';
-          // NPCs
+          // NPCs with walking
           const sw=12*3, sh=18*3;
-          const maxC = Math.max(2, Math.floor((rw-2*bw-8)/(sw+8)));
           present.forEach((npc,ni)=>{
-            const c=ni%maxC, r=Math.floor(ni/maxC);
-            const nx=rx+bw+6+c*(sw+8);
+            const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh+14, t);
+            const nx = pos.x;
             const floatY=Math.sin(t/600+ni*1.7+i*0.5)*2;
-            const ny=ry+bw+labelH+4+r*(sh+16)+floatY;
+            const ny = pos.y + floatY;
             // Shadow
             ctx.fillStyle='rgba(0,0,0,0.25)';
             ctx.beginPath(); ctx.ellipse(nx+sw/2,ny+sh+1,sw*0.35,3,0,0,Math.PI*2); ctx.fill();
@@ -534,7 +916,7 @@ function DialogueStream({ dialogues, npcs }) {
                   <span>{to?.name}</span>
                 </span>
               </div>
-              <div className="dialogue-content">"{d.content}"</div>
+              <div className="dialogue-content" style={{whiteSpace:'pre-wrap'}}>"{d.content}"</div>
               {d.subtext && <div className="dialogue-subtext">{d.subtext}</div>}
             </div>
           </div>
@@ -1066,7 +1448,13 @@ function SimulationScreen({ apiConfig, onSettings }) {
     setError(null);
     try {
       const result = await simulateTick(apiConfig, world, npcs, gameTime, intervention);
+      // 检测NPC换房间，重置走动位置
+      const oldRegions = {};
+      npcs.forEach(n => { oldRegions[n.id] = n.region; });
       const updatedNpcs = applyResult(npcs, result);
+      updatedNpcs.forEach(n => {
+        if (n.region !== oldRegions[n.id]) resetNpcPosition(n.id);
+      });
       setNpcs(updatedNpcs);
 
       if (result.sum) {
