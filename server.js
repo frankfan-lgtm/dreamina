@@ -4,14 +4,18 @@ import { dirname, join } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = process.env.PORT || 4567;
+const PORT = process.env.PORT || 3456;
 
 app.use(express.json({ limit: "1mb" }));
 app.use((req, res, next) => {
-  res.set("Cache-Control", "no-store");
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  res.set("Surrogate-Control", "no-store");
+  res.set("ETag", `"${Date.now()}"`);
   next();
 });
-app.use(express.static(join(__dirname, "dist")));
+app.use(express.static(join(__dirname, "dist"), { etag: false, lastModified: false }));
 
 app.post("/api/claude", async (req, res) => {
   const { systemPrompt, userPrompt, apiKey, baseUrl, model } = req.body;
