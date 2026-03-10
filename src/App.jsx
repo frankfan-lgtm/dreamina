@@ -945,19 +945,19 @@ function resetNpcPosition(npcId) {
 const ASSET_MANIFEST = {
   office_bg: { src: '/assets/office_bg_small.webp' },
   desk: { src: '/assets/desk-v3.webp' },
-  cats: { src: '/assets/cats-spritesheet.webp', cols: 4, rows: 4, fw: 160, fh: 160 },
-  plants: { src: '/assets/plants-spritesheet.webp', cols: 4, rows: 4, fw: 160, fh: 160 },
-  coffee: { src: '/assets/coffee-machine-v3-grid.webp', cols: 12, rows: 8, fw: 230, fh: 230 },
-  flowers: { src: '/assets/flowers-bloom-v2.webp', cols: 4, rows: 4, fw: 65, fh: 65 },
-  posters: { src: '/assets/posters-spritesheet.webp', cols: 8, rows: 4, fw: 160, fh: 160 },
-  serverroom: { src: '/assets/serverroom-spritesheet.webp', cols: 8, rows: 5, fw: 180, fh: 251 },
+  cats: { src: '/assets/cats-spritesheet.webp', cols: 4, rows: 4, fw: 160, fh: 160 },       // 640x640
+  plants: { src: '/assets/plants-spritesheet.webp', cols: 4, rows: 4, fw: 160, fh: 160 }, // 640x640
+  coffee: { src: '/assets/coffee-machine-v3-grid.webp', cols: 12, rows: 8, fw: 230, fh: 230 }, // 2760x1840
+  flowers: { src: '/assets/flowers-bloom-v2.webp', cols: 4, rows: 4, fw: 128, fh: 128 },  // 512x512
+  posters: { src: '/assets/posters-spritesheet.webp', cols: 4, rows: 8, fw: 160, fh: 160 }, // 640x1280
+  serverroom: { src: '/assets/serverroom-spritesheet.webp', cols: 40, rows: 1, fw: 180, fh: 251 }, // 7200x251
   memo_bg: { src: '/assets/memo-bg.webp' },
-  guest1: { src: '/assets/guest_anim_1.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
-  guest2: { src: '/assets/guest_anim_2.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
-  guest3: { src: '/assets/guest_anim_3.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
-  guest4: { src: '/assets/guest_anim_4.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
-  guest5: { src: '/assets/guest_anim_5.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
-  guest6: { src: '/assets/guest_anim_6.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
+  guest1: { src: '/assets/guest_anim_1.webp', cols: 4, rows: 2, fw: 32, fh: 32 },  // 128x64
+  guest2: { src: '/assets/guest_anim_2.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
+  guest3: { src: '/assets/guest_anim_3.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
+  guest4: { src: '/assets/guest_anim_4.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
+  guest5: { src: '/assets/guest_anim_5.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
+  guest6: { src: '/assets/guest_anim_6.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
 };
 
 // 全局素材缓存
@@ -966,20 +966,24 @@ let assetsLoading = false;
 let assetsReady = false;
 
 function loadAllAssets() {
-  if (assetsLoading || assetsReady) return;
+  if (assetsLoading) return;
   assetsLoading = true;
   const entries = Object.entries(ASSET_MANIFEST);
   let loaded = 0;
+  const total = entries.length;
+  console.log(`[Assets] Loading ${total} assets...`);
   entries.forEach(([key, info]) => {
     const img = new Image();
     img.onload = () => {
       loadedAssets[key] = { img, ...info };
       loaded++;
-      if (loaded === entries.length) assetsReady = true;
+      console.log(`[Assets] ✓ ${key} (${img.naturalWidth}x${img.naturalHeight}) [${loaded}/${total}]`);
+      if (loaded >= total) { assetsReady = true; console.log('[Assets] All loaded!'); }
     };
-    img.onerror = () => {
+    img.onerror = (e) => {
+      console.warn(`[Assets] ✗ ${key} failed:`, e);
       loaded++;
-      if (loaded === entries.length) assetsReady = true;
+      if (loaded >= total) { assetsReady = true; console.log('[Assets] All done (with errors)'); }
     };
     img.src = info.src;
   });
