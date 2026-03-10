@@ -941,6 +941,58 @@ function resetNpcPosition(npcId) {
   delete npcPositions[npcId];
 }
 
+// ─── Star-Office 素材加载器 ───
+const ASSET_MANIFEST = {
+  office_bg: { src: '/assets/office_bg_small.webp' },
+  desk: { src: '/assets/desk-v3.webp' },
+  cats: { src: '/assets/cats-spritesheet.webp', cols: 4, rows: 4, fw: 160, fh: 160 },
+  plants: { src: '/assets/plants-spritesheet.webp', cols: 4, rows: 4, fw: 160, fh: 160 },
+  coffee: { src: '/assets/coffee-machine-v3-grid.webp', cols: 12, rows: 8, fw: 230, fh: 230 },
+  flowers: { src: '/assets/flowers-bloom-v2.webp', cols: 4, rows: 4, fw: 65, fh: 65 },
+  posters: { src: '/assets/posters-spritesheet.webp', cols: 8, rows: 4, fw: 160, fh: 160 },
+  serverroom: { src: '/assets/serverroom-spritesheet.webp', cols: 8, rows: 5, fw: 180, fh: 251 },
+  memo_bg: { src: '/assets/memo-bg.webp' },
+  guest1: { src: '/assets/guest_anim_1.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
+  guest2: { src: '/assets/guest_anim_2.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
+  guest3: { src: '/assets/guest_anim_3.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
+  guest4: { src: '/assets/guest_anim_4.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
+  guest5: { src: '/assets/guest_anim_5.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
+  guest6: { src: '/assets/guest_anim_6.webp', cols: 4, rows: 1, fw: 32, fh: 32 },
+};
+
+// 全局素材缓存
+const loadedAssets = {};
+let assetsLoading = false;
+let assetsReady = false;
+
+function loadAllAssets() {
+  if (assetsLoading || assetsReady) return;
+  assetsLoading = true;
+  const entries = Object.entries(ASSET_MANIFEST);
+  let loaded = 0;
+  entries.forEach(([key, info]) => {
+    const img = new Image();
+    img.onload = () => {
+      loadedAssets[key] = { img, ...info };
+      loaded++;
+      if (loaded === entries.length) assetsReady = true;
+    };
+    img.onerror = () => {
+      loaded++;
+      if (loaded === entries.length) assetsReady = true;
+    };
+    img.src = info.src;
+  });
+}
+
+// 从精灵表中绘制某一帧
+function drawSpriteFrame(ctx, asset, frameIndex, dx, dy, dw, dh) {
+  if (!asset || !asset.img || !asset.cols) return;
+  const col = frameIndex % asset.cols;
+  const row = Math.floor(frameIndex / asset.cols);
+  ctx.drawImage(asset.img, col * asset.fw, row * asset.fh, asset.fw, asset.fh, dx, dy, dw || asset.fw, dh || asset.fh);
+}
+
 // Main Canvas Map component with zoom
 function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
   const canvasRef = useRef(null);
@@ -953,8 +1005,9 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
   const propsRef = useRef({});
   propsRef.current = { locations, npcs, selectedNPC, onSelectNPC };
 
-  // Pre-render sprites at two scales
+  // Load Star-Office assets + pre-render pixel sprites
   useEffect(() => {
+    loadAllAssets();
     const cache = {};
     for (const id of Object.keys(SPRITE_COLORS)) {
       cache[id] = { s: prerenderSprite(id, 3), l: prerenderSprite(id, 5) };
@@ -992,72 +1045,145 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         if (!loc) { raf=requestAnimationFrame(render); return; }
         const present = ns.filter(n=>n.region===loc.id);
         const rx=pad, ry=pad, rw=cw-2*pad, rh=ch-2*pad;
-        drawFloor(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.color);
-        // 绘制家具
-        drawRoomFurniture(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.id, true);
+        const innerX=rx+bw, innerY=ry+bw, innerW=rw-2*bw, innerH=rh-2*bw;
+
+        // ── 使用 Star-Office 素材渲染房间背景 ──
+        const useOfficeBg = assetsReady && loadedAssets.office_bg && (loc.id === 'desk' || loc.id === 'boss');
+        if (useOfficeBg) {
+          // 用像素办公室背景图铺满房间区域
+          const bgImg = loadedAssets.office_bg.img;
+          ctx.drawImage(bgImg, 0, 0, bgImg.naturalWidth, bgImg.naturalHeight, innerX, innerY, innerW, innerH);
+          // 半透明色调叠加，让不同房间有区分
+          if (loc.id === 'boss') {
+            ctx.fillStyle = 'rgba(80,40,60,0.2)';
+            ctx.fillRect(innerX, innerY, innerW, innerH);
+          }
+        } else {
+          drawFloor(ctx, innerX, innerY, innerW, innerH, loc.color);
+          drawRoomFurniture(ctx, innerX, innerY, innerW, innerH, loc.id, true);
+        }
+
+        // ── 精灵表装饰动画 ──
+        if (assetsReady) {
+          const animFrame = Math.floor(t / 120); // ~8fps 通用动画时钟
+          const slowFrame = Math.floor(t / 200); // ~5fps 慢动画
+          // 猫（茶水间/家/工位区右下角）
+          if ((loc.id === 'pantry' || loc.id === 'home' || loc.id === 'desk') && loadedAssets.cats) {
+            const catFrame = slowFrame % 16;
+            const catSize = Math.min(innerW * 0.12, 64);
+            drawSpriteFrame(ctx, loadedAssets.cats, catFrame, innerX + innerW * 0.06, innerY + innerH - catSize - 4, catSize, catSize);
+          }
+          // 植物（大部分房间都有）
+          if (loadedAssets.plants) {
+            const plantFrame = (Math.floor(t / 2000) + loc.id.charCodeAt(0)) % 16;
+            const plantSize = Math.min(innerW * 0.1, 52);
+            drawSpriteFrame(ctx, loadedAssets.plants, plantFrame, innerX + innerW - plantSize - 6, innerY + innerH - plantSize - 4, plantSize, plantSize);
+            if (loc.id === 'desk' || loc.id === 'meeting' || loc.id === 'boss') {
+              const plantFrame2 = (plantFrame + 5) % 16;
+              drawSpriteFrame(ctx, loadedAssets.plants, plantFrame2, innerX + 4, innerY + innerH - plantSize * 0.8 - 4, plantSize * 0.8, plantSize * 0.8);
+            }
+          }
+          // 咖啡机（茶水间）
+          if (loc.id === 'pantry' && loadedAssets.coffee) {
+            const coffeeFrame = animFrame % 96;
+            const coffeeSize = Math.min(innerW * 0.2, 80);
+            drawSpriteFrame(ctx, loadedAssets.coffee, coffeeFrame, innerX + innerW * 0.7, innerY + 8, coffeeSize, coffeeSize);
+          }
+          // 花（家/Kelly办公室）
+          if ((loc.id === 'home' || loc.id === 'boss') && loadedAssets.flowers) {
+            const flowerFrame = slowFrame % 16;
+            const flowerSize = Math.min(innerW * 0.08, 36);
+            drawSpriteFrame(ctx, loadedAssets.flowers, flowerFrame, innerX + innerW * 0.45, innerY + innerH - flowerSize - 2, flowerSize, flowerSize);
+          }
+          // 海报（会议室/工位区墙上）
+          if ((loc.id === 'meeting' || loc.id === 'desk') && loadedAssets.posters) {
+            const posterFrame = (loc.id.charCodeAt(0) * 3) % 32;
+            const posterW = Math.min(innerW * 0.12, 48);
+            const posterH = posterW;
+            drawSpriteFrame(ctx, loadedAssets.posters, posterFrame, innerX + innerW * 0.35, innerY + 4, posterW, posterH);
+            drawSpriteFrame(ctx, loadedAssets.posters, (posterFrame + 7) % 32, innerX + innerW * 0.5, innerY + 4, posterW, posterH);
+          }
+          // 服务器机房动画（工位区右上角）
+          if (loc.id === 'desk' && loadedAssets.serverroom) {
+            const srvFrame = Math.floor(t / 166) % 40; // ~6fps
+            const srvH = Math.min(innerH * 0.35, 90);
+            const srvW = srvH * (180 / 251);
+            drawSpriteFrame(ctx, loadedAssets.serverroom, srvFrame, innerX + innerW - srvW - 8, innerY + 4, srvW, srvH);
+          }
+        }
+
         drawBorder(ctx, rx, ry, rw, rh);
 
-        // Label - Pokemon style room name plate
-        ctx.fillStyle='rgba(0,0,0,0.5)';
-        ctx.fillRect(rx+bw+4, ry+bw+2, ctx.measureText(`${loc.emoji} ${loc.name}`).width+16||120, 22);
+        // Label - Star-Office style gold plaque
+        ctx.fillStyle='rgba(0,0,0,0.6)';
+        const labelText = `${loc.emoji} ${loc.name}`;
+        ctx.font='bold 14px monospace'; ctx.textBaseline='top';
+        const labelW = ctx.measureText(labelText).width + 20;
+        ctx.fillRect(rx+bw+4, ry+bw+2, labelW, 22);
         ctx.fillStyle='#ffd700';
-        ctx.fillRect(rx+bw+4, ry+bw+2, 4, 22);
-        ctx.fillStyle='#f0e8d0'; ctx.font='bold 14px monospace'; ctx.textBaseline='top';
-        ctx.fillText(`${loc.emoji} ${loc.name}`, rx+bw+12, ry+bw+5);
+        ctx.fillRect(rx+bw+4, ry+bw+2, 3, 22);
+        ctx.fillStyle='#ffd700';
+        ctx.fillText(labelText, rx+bw+12, ry+bw+5);
 
-        // Back button - Pokemon style
+        // Back button
         const bbx=cw-pad-62, bby=pad+bw+3;
-        ctx.fillStyle='#ffd700';
-        ctx.beginPath(); ctx.roundRect(bbx,bby,54,20,8); ctx.fill();
-        ctx.fillStyle='#0e1119';
-        ctx.fillRect(bbx,bby+17,54,3);
-        ctx.fillStyle='#fff'; ctx.font='bold 11px monospace';
+        ctx.fillStyle='#2a2a45';
+        ctx.beginPath(); ctx.roundRect(bbx,bby,54,20,4); ctx.fill();
+        ctx.strokeStyle='#ffd700'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(bbx,bby,54,20,4); ctx.stroke();
+        ctx.fillStyle='#ffd700'; ctx.font='bold 11px monospace';
         ctx.fillText('◀ 返回', bbx+8, bby+5);
 
-        // NPCs large - 使用工位系统
+        // NPCs large - 使用工位系统 + guest精灵表
         const sc=5, sw=12*sc, sh=18*sc;
         const nRects=[];
+        const guestKeys = ['guest1','guest2','guest3','guest4','guest5','guest6'];
         present.forEach((npc,i)=>{
           const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh, t, loc.id, true);
           const nx = pos.x;
-          const floatY = Math.sin(t/1200+i*1.7)*0.8; // 微小呼吸动画
+          const floatY = Math.sin(t/1200+i*1.7)*0.8;
           const ny = pos.y + floatY;
           // Shadow
           ctx.fillStyle='rgba(0,0,0,0.3)';
           ctx.beginPath(); ctx.ellipse(nx+sw/2, ny+sh+3, sw*0.4, 5, 0, 0, Math.PI*2); ctx.fill();
-          // Sprite
-          const sc2 = spriteCacheRef.current[npc.id]?.l;
-          if (sc2) ctx.drawImage(sc2, nx, ny);
-          // Selection - Pokemon style highlight
+          // Sprite — 尝试用 guest 精灵表，回退到像素精灵
+          const guestAsset = assetsReady && loadedAssets[guestKeys[i % guestKeys.length]];
+          if (guestAsset && guestAsset.img && guestAsset.img.naturalWidth > 40) {
+            // guest精灵表可用，放大绘制
+            const gFrame = Math.floor(t / 250) % (guestAsset.cols * (guestAsset.rows || 1));
+            drawSpriteFrame(ctx, guestAsset, gFrame, nx + sw/2 - 32, ny + sh/2 - 32, 64, 64);
+          } else {
+            const sc2 = spriteCacheRef.current[npc.id]?.l;
+            if (sc2) ctx.drawImage(sc2, nx, ny);
+          }
+          // Selection highlight — gold glow
           if (npc.id===sel) {
             ctx.strokeStyle='#ffd700'; ctx.lineWidth=2;
             ctx.strokeRect(nx-4,ny-4,sw+8,sh+28);
-            ctx.fillStyle='rgba(56,200,232,0.08)';
+            ctx.fillStyle='rgba(255,215,0,0.06)';
             ctx.fillRect(nx-4,ny-4,sw+8,sh+28);
           }
           // Name
-          ctx.fillStyle='#f0e8d0'; ctx.font='bold 12px monospace'; ctx.textAlign='center';
+          ctx.fillStyle='#eee'; ctx.font='bold 12px monospace'; ctx.textAlign='center';
           ctx.fillText(npc.name, nx+sw/2, ny+sh+8); ctx.textAlign='left';
-          // Mood bar - Pokemon HP bar style
+          // Mood bar
           const mbw=32, mbx=nx+(sw-mbw)/2, mby=ny+sh+22;
           ctx.fillStyle='#141722'; ctx.fillRect(mbx-1,mby-1,mbw+2,6);
           ctx.fillStyle='#0e1119'; ctx.fillRect(mbx,mby,mbw,4);
           ctx.fillStyle=moodColor(npc.state.moodValue);
           ctx.fillRect(mbx,mby,mbw*npc.state.moodValue/100,4);
-          // Thought bubble - Pokemon style
+          // Thought bubble
           if (npc.thought||npc.action) {
             const txt = npc.thought || npc.action;
             const display = txt.length>14 ? txt.slice(0,14)+'..' : txt;
             ctx.font='10px monospace';
-            const tw = ctx.measureText(display).width+12;
-            const bx2=nx+sw/2-tw/2, by2=ny-20;
-            // Bubble background
+            const tw2 = ctx.measureText(display).width+12;
+            const bx2=nx+sw/2-tw2/2, by2=ny-20;
             ctx.fillStyle='rgba(20,23,34,0.95)';
-            ctx.beginPath(); ctx.roundRect(bx2,by2,tw,18,6); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(bx2,by2,tw2,18,4); ctx.fill();
             ctx.strokeStyle = npc.thought ? '#ffd700' : '#2a2a45';
             ctx.lineWidth=1;
-            ctx.beginPath(); ctx.roundRect(bx2,by2,tw,18,6); ctx.stroke();
-            // Bubble arrow
+            ctx.beginPath(); ctx.roundRect(bx2,by2,tw2,18,4); ctx.stroke();
             ctx.fillStyle='rgba(20,23,34,0.95)';
             ctx.beginPath(); ctx.moveTo(nx+sw/2-4,by2+18); ctx.lineTo(nx+sw/2,by2+22); ctx.lineTo(nx+sw/2+4,by2+18); ctx.fill();
             ctx.fillStyle = npc.thought ? '#ffd700' : '#9ca3af';
@@ -1082,45 +1208,68 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         locs.forEach((loc,i)=>{
           const col=i%cols, row=Math.floor(i/cols);
           const rx=pad+col*(rw+gap), ry=pad+row*(rh+gap);
-          drawFloor(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.color);
-          // 绘制家具（缩略图版本）
-          drawRoomFurniture(ctx, rx+bw, ry+bw, rw-2*bw, rh-2*bw, loc.id, false);
+          const oInnerX=rx+bw, oInnerY=ry+bw, oInnerW=rw-2*bw, oInnerH=rh-2*bw;
+
+          // 房间背景：desk/boss 用 Star-Office 背景图，其他保持手绘
+          const useOvBg = assetsReady && loadedAssets.office_bg && (loc.id === 'desk' || loc.id === 'boss');
+          if (useOvBg) {
+            const bgI = loadedAssets.office_bg.img;
+            ctx.drawImage(bgI, 0, 0, bgI.naturalWidth, bgI.naturalHeight, oInnerX, oInnerY, oInnerW, oInnerH);
+            if (loc.id === 'boss') { ctx.fillStyle='rgba(80,40,60,0.25)'; ctx.fillRect(oInnerX,oInnerY,oInnerW,oInnerH); }
+          } else {
+            drawFloor(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.color);
+            drawRoomFurniture(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.id, false);
+          }
+
+          // 缩略图装饰精灵（小尺寸）
+          if (assetsReady) {
+            const miniSize = Math.min(oInnerW * 0.14, 28);
+            if (loadedAssets.cats && (loc.id === 'pantry' || loc.id === 'home')) {
+              const cf = (Math.floor(t/300) + i) % 16;
+              drawSpriteFrame(ctx, loadedAssets.cats, cf, oInnerX + 4, oInnerY + oInnerH - miniSize - 2, miniSize, miniSize);
+            }
+            if (loadedAssets.plants) {
+              const pf = (Math.floor(t/3000) + loc.id.charCodeAt(0)) % 16;
+              drawSpriteFrame(ctx, loadedAssets.plants, pf, oInnerX + oInnerW - miniSize - 3, oInnerY + oInnerH - miniSize - 2, miniSize, miniSize);
+            }
+            if (loc.id === 'pantry' && loadedAssets.coffee) {
+              const cf2 = Math.floor(t/150) % 96;
+              const coffeeS = Math.min(oInnerW * 0.18, 32);
+              drawSpriteFrame(ctx, loadedAssets.coffee, cf2, oInnerX + oInnerW * 0.65, oInnerY + 4, coffeeS, coffeeS);
+            }
+          }
+
           drawBorder(ctx, rx, ry, rw, rh);
-          // Label - Pokemon style
-          ctx.fillStyle='rgba(0,0,0,0.45)';
+          // Label — gold plaque
+          ctx.fillStyle='rgba(0,0,0,0.55)';
           ctx.fillRect(rx+bw, ry+bw, rw-2*bw, 16);
-          ctx.fillStyle='#f0e8d0'; ctx.font='bold 10px monospace'; ctx.textBaseline='top';
+          ctx.fillStyle='#ffd700'; ctx.font='bold 10px monospace'; ctx.textBaseline='top';
           ctx.fillText(`${loc.emoji} ${loc.name}`, rx+bw+3, ry+bw+3);
-          // Count badge - Pokemon style
+          // Count badge
           const present=ns.filter(n=>n.region===loc.id);
           if(present.length>0) {
             ctx.fillStyle='#ffd700';
             ctx.beginPath(); ctx.arc(rx+rw-bw-10, ry+bw+8, 8, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle='#fff';
+            ctx.fillStyle='#1a1a2e';
           } else {
-            ctx.fillStyle='#4a5a78';
+            ctx.fillStyle='#9ca3af';
           }
           ctx.font='bold 10px monospace'; ctx.textAlign='center';
           ctx.fillText(String(present.length), rx+rw-bw-10, ry+bw+3); ctx.textAlign='left';
-          // NPCs with station-based positioning
+          // NPCs
           const sw=12*3, sh=18*3;
           present.forEach((npc,ni)=>{
             const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh+14, t, loc.id, false);
             const nx = pos.x;
-            const floatY=Math.sin(t/1200+ni*1.7+i*0.5)*0.5; // 微小呼吸动画
+            const floatY=Math.sin(t/1200+ni*1.7+i*0.5)*0.5;
             const ny = pos.y + floatY;
-            // Shadow
             ctx.fillStyle='rgba(0,0,0,0.25)';
             ctx.beginPath(); ctx.ellipse(nx+sw/2,ny+sh+1,sw*0.35,3,0,0,Math.PI*2); ctx.fill();
-            // Sprite
             const spr=spriteCacheRef.current[npc.id]?.s;
             if(spr) ctx.drawImage(spr,nx,ny);
-            // Selection - Pokemon style
             if(npc.id===sel){ ctx.strokeStyle='#ffd700'; ctx.lineWidth=1.5; ctx.strokeRect(nx-2,ny-2,sw+4,sh+14); }
-            // Name
-            ctx.fillStyle='#f0e8d0'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+            ctx.fillStyle='#eee'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
             ctx.fillText(npc.name, nx+sw/2, ny+sh+3); ctx.textAlign='left';
-            // Mini mood - Pokemon HP bar
             const mbw2=22, mbx2=nx+(sw-mbw2)/2, mby2=ny+sh+12;
             ctx.fillStyle='#0e1119'; ctx.fillRect(mbx2,mby2,mbw2,3);
             ctx.fillStyle=moodColor(npc.state.moodValue);
