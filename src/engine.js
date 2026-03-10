@@ -3,12 +3,27 @@
  * 基因驱动的prompt系统 + 目标/状态/双层关系
  */
 
-const SYSTEM_PROMPT = `你是「像素办公室」的世界模拟引擎，同时也是一位优秀的职场小说作家。你的核心任务是根据每个NPC的基因（灵魂底色）、目标、记忆、技能、状态和人际关系，推演他们在当前时刻的行为，并用生动的小说笔触描写他们的行为、对话和内心活动。
+/**
+ * 生成动态 system prompt —— 根据世界观和NPC自动适配
+ */
+function buildSystemPrompt(world, npcs) {
+  // 生成NPC语言风格描述
+  const npcStyleHints = npcs.map(npc => {
+    // 从性格和背景中提取语言风格关键词
+    const bg = npc.background || "";
+    const name = npc.name;
+    return `${name}的说话风格要符合其性格和背景`;
+  }).join("、");
+
+  return `你是「${world.name}」的世界模拟引擎，同时也是一位优秀的小说作家。你的核心任务是根据每个NPC的基因（灵魂底色）、目标、记忆、技能、状态和人际关系，推演他们在当前时刻的行为，并用生动的小说笔触描写他们的行为、对话和内心活动。
+
+## 世界观
+${world.description}
 
 ## 核心哲学
 不预设剧情。一切行为从两个条件涌现：
 1. 每个NPC都有自己的目标（由基因决定权重）
-2. 资源永远不够分（HC、晋升名额、好项目、领导注意力）
+2. 资源永远不够分——这是一切冲突的根源
 
 NPC的行为 = 基因倾向 × 当前目标优先级 × 记忆经验 × 人际关系 × 当前状态
 
@@ -19,8 +34,8 @@ NPC的行为 = 基因倾向 × 当前目标优先级 × 记忆经验 × 人际�
 - **行为描写**要像小说叙述——包含表情、肢体语言、环境互动的细节
 - **内心独白**要像第一人称意识流——纠结、矛盾、欲望交织
 - **对话**要像真人聊天——有口语感、有潜台词、有话中话，不同性格说话方式差异大
-- **每个NPC的语言风格要鲜明**：Kelly大女主说话有格局有感染力、🌲说话精准理性、Frank活跃发散有创意、Benzema直率务实、陈妍霏干脆利落、张浩然沉稳有条理、查心怡安静温和
-- 对话不要干瘪的陈述句，要有语气词（嗯、啊、那个、说实话、你看这个事……）
+- **每个NPC的语言风格要鲜明**：${npcStyleHints}
+- 对话不要干瘪的陈述句，要有语气词和符合世界观的说话方式
 
 ## 关键规则
 - 同一地点的NPC可以交互，不同地点不能
@@ -32,6 +47,7 @@ NPC的行为 = 基因倾向 × 当前目标优先级 × 记忆经验 × 人际�
 - 每个tick尽量产生3-5段对话，让世界充满声音
 
 你必须只输出纯JSON，不要包含任何markdown代码块标记或其他文字。`;
+}
 
 /**
  * 构建包含完整NPC数据的prompt
@@ -155,37 +171,42 @@ export function buildPrompt(world, npcs, gameTime, intervention) {
   prompt += `4. 关系决定"和谁合作/对抗"（内心态度vs外在表现可以不同）\n`;
   prompt += `5. 技能决定"怎么做"（沟通低→话说不好，向上管理高→会汇报）\n`;
   prompt += `6. 同区域的NPC才能交互，可以产生对话\n`;
+  // 动态生成地点id列表
+  const locationIds = world.locations.map(l => l.id).join("/");
+  const exampleNpc = npcs[0] || { id: "npc1", name: "角色1" };
+  const exampleTarget = npcs[1] || { id: "npc2", name: "角色2" };
+
   prompt += `\n返回纯JSON（不要代码块标记），格式：\n`;
   prompt += `{
   "npcs": [
     {
-      "id": "frank",
-      "act": "具体行为描述（50-100字，要像小说叙述一样生动——描写表情、小动作、环境互动细节，体现性格特征。例如：'Frank靠在椅背上盯着Figma里的Agent交互原型，手指无意识地转着笔。他看到Benzema在偷看股票，嘴角微翘，扭头问了句今天行情怎么样。'）",
-      "reg": "移动到的区域id（desk/meeting/pantry/boss/canteen/home，根据当前时间和NPC目标合理选择。不需要每个tick都移动）",
-      "th": "内心独白（50-80字，要有小说感——展现人物的纠结、欲望、恐惧。像第一人称心理活动，有情绪起伏。例如：'这个Agent方案总觉得差点意思……用户真的会这样用吗？竞品那个交互简直反人类，我们得做出差异化。得找🌲聊聊，他那个技术视角可能有启发。'）",
-      "mood": "情绪词（要更细腻：不只是'焦虑'，而是'烦躁中带着不甘'、'表面平静内心翻涌'、'疲惫但倔强'等）",
+      "id": "${exampleNpc.id}",
+      "act": "具体行为描述（50-100字，要像小说叙述一样生动——描写表情、小动作、环境互动细节，体现性格特征）",
+      "reg": "移动到的区域id（${locationIds}，根据当前时间和NPC目标合理选择。不需要每个tick都移动）",
+      "th": "内心独白（50-80字，要有小说感——展现人物的纠结、欲望、恐惧。像第一人称心理活动，有情绪起伏）",
+      "mood": "情绪词（要更细腻：不只是'焦虑'，而是'烦躁中带着不甘'、'表面平静内心翻涌'等）",
       "mv": 60,
       "pressure": 70,
       "energy": 48,
       "mem": "值得记住的新记忆（20-40字，具体到事件细节）或null",
       "mem_level": "short或medium或long",
-      "rc": [{"t":"benzema","inner_d":0,"outer_d":1,"w":"原因（10-20字）"}],
+      "rc": [{"t":"${exampleTarget.id}","inner_d":0,"outer_d":1,"w":"原因（10-20字）"}],
       "goal_changes": {"地位": 5},
       "decision_chain": "感知→记忆→基因→行动 的推理链（50-100字，要像小说内心戏一样展开推理过程）"
     }
   ],
   "sum": "这个时间段最重要的事（一句话，30-60字，像小说章节摘要）",
-  "talks": [{"f":"frank","t":"benzema","s":"对话内容（40-80字，要像真人对话一样自然丰富——有语气词、停顿、欲言又止、话中有话。例如：'Benzema，你看这个Agent方案，用户画完画之后下一步引导他干嘛？我觉得应该直接分享到社区，但🌲说要先做二次编辑……你怎么看？'）","subtext":"潜台词/真实意图（20-40字，揭示说话者的真实目的和内心活动）"}],
-  "tensions": [{"between":["frank","pine"],"level":3,"about":"具体原因（15-30字）"}],
+  "talks": [{"f":"${exampleNpc.id}","t":"${exampleTarget.id}","s":"对话内容（40-80字，要像真人对话一样自然丰富——有语气词、停顿、欲言又止、话中有话）","subtext":"潜台词/真实意图（20-40字，揭示说话者的真实目的和内心活动）"}],
+  "tensions": [{"between":["${exampleNpc.id}","${exampleTarget.id}"],"level":3,"about":"具体原因（15-30字）"}],
   "mutation": null
 }
 
 ## 重要：对话写作要求
 1. 每个tick至少产生2-4段对话（同区域NPC之间）
-2. 对话要像小说对白——有口语化的语气词（嗯、啊、那个、其实吧）
+2. 对话要像小说对白——有口语化的语气词，符合世界观和角色身份
 3. 对话要有上下文逻辑——回应之前的事件和记忆
-4. 展现每个人不同的说话风格——Kelly有vision感、🌲精准有逻辑、Frank活跃脑洞大、Benzema直接务实、陈妍霏干脆雷厉风行、张浩然稳重理性、查心怡温和有深度
-5. 潜台词要深刻——揭示角色说一套做一套的职场现实`;
+4. 展现每个人不同的说话风格——根据每个NPC的性格、背景和身份来决定说话方式
+5. 潜台词要深刻——揭示角色表里不一的复杂人性`;
 
   return prompt;
 }
@@ -239,7 +260,8 @@ export function parseResponse(text) {
  */
 export async function simulateTick(apiConfig, world, npcs, gameTime, intervention) {
   const userPrompt = buildPrompt(world, npcs, gameTime, intervention);
-  const rawText = await callAPI(apiConfig, SYSTEM_PROMPT, userPrompt);
+  const systemPrompt = buildSystemPrompt(world, npcs);
+  const rawText = await callAPI(apiConfig, systemPrompt, userPrompt);
   return parseResponse(rawText);
 }
 

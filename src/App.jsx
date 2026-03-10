@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { WORLD_CONFIG, NPCS, INITIAL_RELATIONSHIPS, SCHEDULE_TEMPLATE, NPC_STATIONS } from "./world.js";
 import { simulateTick, applyResult, chatWithNPC } from "./engine.js";
+import { WORLD_PRESETS, generateWorld, autoAssignSprites } from "./sdk/index.js";
 
 // ─── 工具函数 ───
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -70,50 +71,8 @@ const FEMALE_BODY = [ // 长发女性 12x18
   "...pp.pp....",
 ];
 
-const SPRITE_COLORS = {
-  kelly: { // Kelly - 优雅深紫色西装外套，大女主
-    H: "#2a1520", h: "#3a2530", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#5a3868", t: "#4a2858", P: "#2a2038", p: "#1a1028", B: "#3a2848",
-    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
-    body: "female",
-  },
-  pine: { // 🌲 - 森林绿polo衫，年轻leader
-    H: "#1a1a28", h: "#28283a", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#2a6a48", t: "#1a5a38", P: "#2a3040", p: "#1a2030", B: "#223038",
-    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
-    body: "male",
-  },
-  frank: { // Frank - 时尚蓝色夹克，摄影达人
-    H: "#2a2035", h: "#3a3048", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#3a6a9a", t: "#2a5a8a", P: "#2a2a3a", p: "#1a1a2a", B: "#2a3848",
-    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
-    body: "male",
-  },
-  benzema: { // Benzema - 黑灰科技风卫衣
-    H: "#1a1a1a", h: "#2a2a2a", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#3a3a42", t: "#2a2a32", P: "#1a1a22", p: "#121218", B: "#2a2a30",
-    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
-    body: "male",
-  },
-  yanfei: { // 陈妍霏 - 活力珊瑚橙，女汉子
-    H: "#2a1818", h: "#3a2828", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#d06848", t: "#b05838", P: "#3a3048", p: "#2a2038", B: "#2a2838",
-    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
-    body: "female",
-  },
-  haoran: { // 张浩然 - 卡其色休闲衬衫，稳重奶爸
-    H: "#2a2020", h: "#3a3030", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#8a7a60", t: "#7a6a50", P: "#3a3a42", p: "#2a2a32", B: "#4a4038",
-    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
-    body: "male",
-  },
-  xinyi: { // 查心怡 - 淡蓝紫色针织衫，安静温柔
-    H: "#3a2838", h: "#4a3848", S: "#f0c8a0", s: "#d8b090", M: "#d8a088",
-    T: "#7080a8", t: "#607098", P: "#3a3048", p: "#2a2038", B: "#2a2838",
-    E: "#12101a", W: "#f0f0e8", A: "#f0c8a0",
-    body: "female",
-  },
-};
+// 动态精灵配色 — 会在世界选择时被设置
+let SPRITE_COLORS = WORLD_PRESETS.office.spriteColors;
 
 // 缓存渲染结果
 const spriteCache = {};
@@ -178,13 +137,15 @@ function PixelSprite({ npcId, size = 4 }) {
 const STORAGE_KEY = "dreamina_api_config";
 
 // ─── 初始化NPC状态 ───
-function initNpcs() {
-  return NPCS.map((npc) => ({
+function initNpcs(npcData, relationshipData) {
+  const npcsSource = npcData || NPCS;
+  const relsSource = relationshipData || INITIAL_RELATIONSHIPS;
+  return npcsSource.map((npc) => ({
     ...JSON.parse(JSON.stringify(npc)),
     action: "",
     thought: "",
     decisionChain: "",
-    relationships: INITIAL_RELATIONSHIPS[npc.id] || {},
+    relationships: relsSource[npc.id] || {},
   }));
 }
 
@@ -2125,8 +2086,9 @@ function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, 
 }
 
 // ─── 主模拟界面 ───
-function SimulationScreen({ apiConfig, onSettings }) {
-  const [npcs, setNpcs] = useState(initNpcs);
+function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
+  const wp = worldPack || WORLD_PRESETS.office;
+  const [npcs, setNpcs] = useState(() => initNpcs(wp.npcs, wp.relationships));
   const [gameTime, setGameTime] = useState({ day: 1, hour: 9 });
   const [events, setEvents] = useState([]);
   const [dialogues, setDialogues] = useState([]);
@@ -2140,7 +2102,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
   const [showIntervention, setShowIntervention] = useState(false);
   const playRef = useRef(false);
 
-  const world = WORLD_CONFIG;
+  const world = wp.config;
 
   const advanceTick = useCallback(async () => {
     if (isBusy) return;
@@ -2224,7 +2186,12 @@ function SimulationScreen({ apiConfig, onSettings }) {
       {/* ── 顶栏（横跨三栏）── */}
       <header className="sim-header">
         <div className="flex items-center gap-3">
-          <span className="font-bold" style={{color:'#ffd700', fontSize:14}}>⭐ 像素办公室</span>
+          {onBack && (
+            <button onClick={onBack}
+              style={{color:'#9ca3af', cursor:'pointer', background:'none', border:'none', fontSize:12, padding:'2px 6px'}}
+              className="hover:text-accent">← 选世界</button>
+          )}
+          <span className="font-bold" style={{color:'#ffd700', fontSize:14}}>{wp.emoji || "⭐"} {world.name}</span>
           {error && <span style={{color:'#e94560', fontSize:11}}>{error}</span>}
         </div>
         <div className="flex items-center gap-2">
@@ -2306,9 +2273,125 @@ function SimulationScreen({ apiConfig, onSettings }) {
   );
 }
 
+// ─── 世界选择页 ───
+function WorldSelectScreen({ onSelect, onCreateNew, apiConfig }) {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [userPrompt, setUserPrompt] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [genError, setGenError] = useState(null);
+
+  const handleGenerate = async () => {
+    if (!userPrompt.trim() || isGenerating) return;
+    setIsGenerating(true);
+    setGenError(null);
+    try {
+      const worldData = await generateWorld(userPrompt.trim(), apiConfig);
+      // 自动分配精灵配色
+      const { spriteColors, npcStations } = autoAssignSprites(worldData.npcs);
+      const newWorldPack = {
+        id: "custom_" + Date.now(),
+        emoji: "🌍",
+        label: worldData.config.name,
+        tagline: worldData.config.description.slice(0, 40) + "...",
+        config: worldData.config,
+        npcs: worldData.npcs,
+        relationships: worldData.relationships,
+        schedule: worldData.schedule,
+        npcStations,
+        spriteColors,
+      };
+      onSelect(newWorldPack);
+    } catch (e) {
+      setGenError(e.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-8"
+      style={{background:'radial-gradient(ellipse at center, #2a2a45 0%, #1a1a2e 65%, #0e1119 100%)'}}>
+      <div className="text-5xl mb-4">🌌</div>
+      <h1 className="text-2xl font-bold mb-2" style={{color:'#ffd700'}}>选择你的世界</h1>
+      <p className="mb-8 text-sm" style={{color:'#9ca3af'}}>选择一个预设世界，或者用几句话创造一个全新的世界</p>
+
+      {/* 预设世界卡片 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl w-full mb-8">
+        {Object.values(WORLD_PRESETS).map((preset) => (
+          <button key={preset.id} onClick={() => onSelect(preset)}
+            className="text-left cursor-pointer transition-all"
+            style={{
+              background:'#141722', border:'2px solid #2a2a45', borderRadius:8, padding:20,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#ffd700'; e.currentTarget.style.background = '#1a1a30'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a45'; e.currentTarget.style.background = '#141722'; }}>
+            <div className="text-3xl mb-2">{preset.emoji}</div>
+            <div className="font-bold mb-1" style={{color:'#ffd700', fontSize:16}}>{preset.label}</div>
+            <div className="text-xs mb-3" style={{color:'#9ca3af'}}>{preset.tagline}</div>
+            <div className="flex gap-1">
+              {preset.npcs.slice(0, 7).map(n => (
+                <span key={n.id} title={n.name} style={{fontSize:14}}>{n.emoji}</span>
+              ))}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* 创造新世界 */}
+      {!showCreate ? (
+        <button onClick={() => setShowCreate(true)}
+          className="cursor-pointer transition-all"
+          style={{
+            background:'rgba(255,215,0,0.08)', border:'2px dashed rgba(255,215,0,0.3)',
+            borderRadius:8, padding:'16px 32px', color:'#ffd700', fontSize:14,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#ffd700'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,215,0,0.3)'; }}>
+          ✨ 创造新世界
+        </button>
+      ) : (
+        <div className="w-full max-w-2xl"
+          style={{background:'#141722', border:'2px solid #2a2a45', borderRadius:8, padding:24}}>
+          <div className="text-sm mb-3" style={{color:'#ffd700'}}>✨ 描述你想要的世界</div>
+          <textarea
+            value={userPrompt}
+            onChange={(e) => setUserPrompt(e.target.value)}
+            placeholder="例如：三国演义，诸葛亮和司马懿的智斗&#10;或者：一个火锅店，五个性格迥异的员工&#10;或者：星际飞船上的叛变，船长和AI的博弈"
+            rows={4}
+            style={{
+              width:'100%', background:'#0e1119', border:'2px solid #2a2a45', borderRadius:4,
+              padding:'10px 14px', fontSize:13, color:'#e8e4d8', outline:'none', resize:'vertical',
+              fontFamily:'inherit',
+            }}
+          />
+          {genError && <div className="mt-2 text-xs" style={{color:'#e94560'}}>{genError}</div>}
+          <div className="flex gap-3 mt-4">
+            <button onClick={handleGenerate} disabled={isGenerating || !userPrompt.trim()}
+              className="btn-pokemon btn-pokemon-primary"
+              style={{padding:'8px 24px', fontSize:13, opacity: (isGenerating || !userPrompt.trim()) ? 0.5 : 1}}>
+              {isGenerating ? "⟳ AI正在创造世界..." : "🚀 生成世界"}
+            </button>
+            <button onClick={() => { setShowCreate(false); setGenError(null); }}
+              className="btn-pokemon btn-pokemon-secondary"
+              style={{padding:'8px 16px', fontSize:13}}>
+              取消
+            </button>
+          </div>
+          {isGenerating && (
+            <div className="mt-3 text-xs" style={{color:'#9ca3af'}}>
+              AI正在构建世界观、设计角色基因、编织关系网...大约需要30秒
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── App Root ───
 export default function App() {
-  const [phase, setPhase] = useState("sim"); // 默认进入模拟（如果有API配置的话）
+  const [phase, setPhase] = useState("select"); // select → sim → setup
+  const [selectedWorld, setSelectedWorld] = useState(null);
   const [apiConfig, setApiConfig] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -2319,18 +2402,39 @@ export default function App() {
   const handleSaveConfig = (config) => {
     setApiConfig(config);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch {}
+    setPhase(selectedWorld ? "sim" : "select");
+  };
+
+  const handleSelectWorld = (worldPack) => {
+    setSelectedWorld(worldPack);
+    // 设置精灵配色
+    SPRITE_COLORS = worldPack.spriteColors || {};
+    // 清除精灵缓存
+    Object.keys(spriteCache).forEach(k => delete spriteCache[k]);
     setPhase("sim");
   };
 
-  // 只在用户主动点设置时才进设置页（server.js 已内置默认 API Key）
   if (phase === "setup") {
     return <ApiSetupScreen config={apiConfig} onSave={handleSaveConfig} />;
   }
 
+  if (phase === "select" || !selectedWorld) {
+    return <WorldSelectScreen
+      onSelect={handleSelectWorld}
+      apiConfig={apiConfig}
+    />;
+  }
+
   return (
     <SimulationScreen
+      key={selectedWorld.id}
       apiConfig={apiConfig}
+      worldPack={selectedWorld}
       onSettings={() => setPhase("setup")}
+      onBack={() => {
+        setSelectedWorld(null);
+        setPhase("select");
+      }}
     />
   );
 }
