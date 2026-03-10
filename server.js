@@ -24,7 +24,7 @@ app.post("/api/claude", async (req, res) => {
     return res.status(400).json({ error: "缺少 systemPrompt 或 userPrompt/messages" });
   }
 
-  const key = apiKey || process.env.API_KEY || "94090db7-6585-460e-a8ff-7830c1516624";
+  const key = apiKey || process.env.API_KEY || "api-key-20260309115657";
   if (!key) {
     return res.status(400).json({ error: "缺少 API Key" });
   }

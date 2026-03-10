@@ -1968,9 +1968,9 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
           <div className="text-center py-8">
             <div className="text-2xl mb-2">{npc.emoji}</div>
             <div className="text-xs" style={{color:'#9ca3af'}}>试着和{npc.name}聊聊吧</div>
-            <div className="text-[10px] mt-1" style={{color:'#64748b'}}>比如问问TA对工作的看法、对同事的评价……</div>
+            <div className="text-[10px] mt-1" style={{color:'#64748b'}}>比如问问TA最近的经历、对身边人的看法……</div>
             <div className="flex flex-wrap gap-1 mt-3 justify-center">
-              {["最近工作怎么样？", "你觉得同事们怎么样？", "有什么烦心事吗？"].map((q, i) => (
+              {["最近过得怎么样？", "你觉得身边的人怎么样？", "有什么烦心事吗？"].map((q, i) => (
                 <button key={i} onClick={() => { setInput(q); }}
                   className="text-[10px] px-2 py-1 cursor-pointer transition-all"
                   style={{borderRadius:8, border:'2px solid #2a2a45', color:'#9ca3af', background:'#1e2c50'}}>
@@ -2031,8 +2031,8 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
 }
 
 // ─── 底部时间条（线性时间轴）───
-function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, onSpeedChange }) {
-  const hourLabel = SCHEDULE_TEMPLATE.find((s) => s.hour === gameTime.hour)?.label || "";
+function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, onSpeedChange, schedule }) {
+  const hourLabel = (schedule || SCHEDULE_TEMPLATE).find((s) => s.hour === gameTime.hour)?.label || "";
   // 7:00 ~ 23:00 = 16小时
   const progress = ((gameTime.hour - 7) / 16) * 100;
   const hours = [7, 9, 12, 14, 18, 21, 23];
@@ -2268,7 +2268,7 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
       {/* ── 底部时间条 ── */}
       <TimeBar gameTime={gameTime} isPlaying={isPlaying} isBusy={isBusy}
         onAdvance={advanceTick} onTogglePlay={() => setIsPlaying(!isPlaying)}
-        speed={speed} onSpeedChange={setSpeed} />
+        speed={speed} onSpeedChange={setSpeed} schedule={wp.schedule} />
     </div>
   );
 }
