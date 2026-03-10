@@ -943,22 +943,195 @@ function resetNpcPosition(npcId) {
 
 // ─── Star-Office 素材加载器 ───
 const ASSET_MANIFEST = {
-  office_bg: { src: '/assets/office_bg_small.webp' },
-  desk: { src: '/assets/desk-v3.webp' },
+  desk: { src: '/assets/desk-v3.webp' },                                                    // 276x214 办公桌
   cats: { src: '/assets/cats-spritesheet.webp', cols: 4, rows: 4, fw: 160, fh: 160 },       // 640x640
-  plants: { src: '/assets/plants-spritesheet.webp', cols: 4, rows: 4, fw: 160, fh: 160 }, // 640x640
+  plants: { src: '/assets/plants-spritesheet.webp', cols: 4, rows: 4, fw: 160, fh: 160 },   // 640x640
   coffee: { src: '/assets/coffee-machine-v3-grid.webp', cols: 12, rows: 8, fw: 230, fh: 230 }, // 2760x1840
-  flowers: { src: '/assets/flowers-bloom-v2.webp', cols: 4, rows: 4, fw: 128, fh: 128 },  // 512x512
+  flowers: { src: '/assets/flowers-bloom-v2.webp', cols: 4, rows: 4, fw: 128, fh: 128 },    // 512x512
   posters: { src: '/assets/posters-spritesheet.webp', cols: 4, rows: 8, fw: 160, fh: 160 }, // 640x1280
   serverroom: { src: '/assets/serverroom-spritesheet.webp', cols: 40, rows: 1, fw: 180, fh: 251 }, // 7200x251
   memo_bg: { src: '/assets/memo-bg.webp' },
-  guest1: { src: '/assets/guest_anim_1.webp', cols: 4, rows: 2, fw: 32, fh: 32 },  // 128x64
+  star_idle: { src: '/assets/star-idle-v5.png', cols: 8, rows: 6, fw: 256, fh: 256 },       // 2048x1536 猫坐沙发
+  star_work: { src: '/assets/star-working-spritesheet-grid.webp', cols: 8, rows: 5, fw: 300, fh: 300 }, // 2400x1500 猫工作
+  guest1: { src: '/assets/guest_anim_1.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
   guest2: { src: '/assets/guest_anim_2.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
   guest3: { src: '/assets/guest_anim_3.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
   guest4: { src: '/assets/guest_anim_4.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
   guest5: { src: '/assets/guest_anim_5.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
   guest6: { src: '/assets/guest_anim_6.webp', cols: 4, rows: 2, fw: 32, fh: 32 },
 };
+
+// 每个房间的视觉配置：地板色、墙面色、装饰素材
+const ROOM_STYLES = {
+  desk:    { floor: '#2a2a3e', wall: '#1e1e32', accent: '#4a6a8a', label: '工位区',
+             decor: ['desk', 'star_work', 'serverroom', 'plants'] },
+  meeting: { floor: '#2a2a42', wall: '#1e1e36', accent: '#6a5a8a', label: '会议室',
+             decor: ['posters', 'flowers', 'plants'] },
+  boss:    { floor: '#32283e', wall: '#261e32', accent: '#8a6a5a', label: '老板办公室',
+             decor: ['desk', 'flowers', 'posters'] },
+  pantry:  { floor: '#283228', wall: '#1e261e', accent: '#5a8a5a', label: '茶水间',
+             decor: ['coffee', 'cats', 'plants'] },
+  canteen: { floor: '#32302a', wall: '#26241e', accent: '#8a7a5a', label: '食堂',
+             decor: ['plants', 'flowers', 'cats'] },
+  home:    { floor: '#2e2838', wall: '#221e2e', accent: '#7a6a9a', label: '家',
+             decor: ['star_idle', 'cats', 'plants', 'flowers'] },
+};
+
+// 绘制房间背景（替代 office_bg）
+function drawRoomBg(ctx, x, y, w, h, roomId, t, isZoomed) {
+  const style = ROOM_STYLES[roomId] || ROOM_STYLES.desk;
+  // 地板
+  ctx.fillStyle = style.floor;
+  ctx.fillRect(x, y, w, h);
+  // 地板纹理格子
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  const gridSize = isZoomed ? 32 : 16;
+  for (let gx = x; gx < x+w; gx += gridSize) {
+    ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx, y+h); ctx.stroke();
+  }
+  for (let gy = y; gy < y+h; gy += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x+w, gy); ctx.stroke();
+  }
+  // 墙面（上方 25%）
+  const wallH = h * 0.25;
+  ctx.fillStyle = style.wall;
+  ctx.fillRect(x, y, w, wallH);
+  // 墙面分界线
+  ctx.strokeStyle = style.accent;
+  ctx.lineWidth = isZoomed ? 2 : 1;
+  ctx.beginPath(); ctx.moveTo(x, y+wallH); ctx.lineTo(x+w, y+wallH); ctx.stroke();
+  // 踢脚线
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(x, y+wallH, w, isZoomed ? 3 : 1);
+
+  if (!assetsReady) return;
+  const seed = roomId.charCodeAt(0) * 7 + roomId.charCodeAt(roomId.length-1) * 13;
+  const unit = isZoomed ? h / 10 : h / 8;
+
+  // 根据房间类型放置装饰
+  if (roomId === 'desk') {
+    // 办公桌（左侧）
+    if (loadedAssets.desk) {
+      const dW = unit * 3.5, dH = dW * (214/276);
+      ctx.drawImage(loadedAssets.desk.img, x + unit*0.8, y + h - dH - unit*0.2, dW, dH);
+      // 第二张桌子（右侧偏上）
+      if (isZoomed) ctx.drawImage(loadedAssets.desk.img, x + w - dW - unit*1.5, y + h - dH - unit*0.5, dW, dH);
+    }
+    // 猫在办公椅上工作（中间偏右）
+    if (loadedAssets.star_work) {
+      const sSize = unit * (isZoomed ? 3 : 2.5);
+      const sFrame = Math.floor(t / 100) % 40;
+      drawSpriteFrame(ctx, loadedAssets.star_work, sFrame, x + w*0.45, y + h - sSize - unit*0.3, sSize, sSize);
+    }
+    // 服务器机架（右上角）
+    if (loadedAssets.serverroom) {
+      const srvH = unit * (isZoomed ? 3.5 : 2.5);
+      const srvW = srvH * (180/251);
+      const srvFrame = Math.floor(t/166) % 40;
+      drawSpriteFrame(ctx, loadedAssets.serverroom, srvFrame, x + w - srvW - unit*0.3, y + wallH + unit*0.2, srvW, srvH);
+    }
+    // 植物
+    if (loadedAssets.plants) {
+      const pS = unit * 1.2;
+      drawSpriteFrame(ctx, loadedAssets.plants, seed%16, x + w - pS - unit*0.3, y + h - pS - unit*0.2, pS, pS);
+    }
+  } else if (roomId === 'meeting') {
+    // 海报墙（墙面上方排列）
+    if (loadedAssets.posters) {
+      const pSize = unit * (isZoomed ? 2 : 1.5);
+      for (let pi = 0; pi < (isZoomed ? 4 : 2); pi++) {
+        drawSpriteFrame(ctx, loadedAssets.posters, (seed+pi*3)%32, x + unit*0.8 + pi*(pSize+unit*0.5), y + unit*0.3, pSize, pSize);
+      }
+    }
+    // 花
+    if (loadedAssets.flowers) {
+      const fS = unit * 1;
+      drawSpriteFrame(ctx, loadedAssets.flowers, (seed+2)%16, x + w - fS*2, y + h - fS - unit*0.2, fS, fS);
+      drawSpriteFrame(ctx, loadedAssets.flowers, (seed+7)%16, x + unit*0.5, y + h - fS - unit*0.3, fS, fS);
+    }
+    // 植物
+    if (loadedAssets.plants) {
+      const pS = unit * 1.2;
+      drawSpriteFrame(ctx, loadedAssets.plants, (seed+5)%16, x + w - pS - unit*0.3, y + h - pS - unit*0.2, pS, pS);
+    }
+  } else if (roomId === 'boss') {
+    // 老板桌（中间偏大）
+    if (loadedAssets.desk) {
+      const dW = unit * (isZoomed ? 4 : 3), dH = dW * (214/276);
+      ctx.drawImage(loadedAssets.desk.img, x + (w-dW)/2, y + h - dH - unit*0.5, dW, dH);
+    }
+    // 海报/书架（墙上）
+    if (loadedAssets.posters) {
+      const pSize = unit * 1.8;
+      drawSpriteFrame(ctx, loadedAssets.posters, (seed+1)%32, x + unit*0.5, y + unit*0.2, pSize, pSize);
+      if (isZoomed) drawSpriteFrame(ctx, loadedAssets.posters, (seed+4)%32, x + w - pSize - unit*0.5, y + unit*0.2, pSize, pSize);
+    }
+    // 花（桌上/角落）
+    if (loadedAssets.flowers) {
+      const fS = unit * 1.2;
+      drawSpriteFrame(ctx, loadedAssets.flowers, (seed+3)%16, x + w - fS - unit*0.5, y + h - fS - unit*0.3, fS, fS);
+    }
+  } else if (roomId === 'pantry') {
+    // 咖啡机（右上，动画）
+    if (loadedAssets.coffee) {
+      const cSize = unit * (isZoomed ? 2.5 : 2);
+      const cFrame = Math.floor(t/80) % 96;
+      drawSpriteFrame(ctx, loadedAssets.coffee, cFrame, x + w - cSize - unit*0.5, y + wallH + unit*0.2, cSize, cSize);
+    }
+    // 猫（左下走动）
+    if (loadedAssets.cats) {
+      const catS = unit * 1.5;
+      drawSpriteFrame(ctx, loadedAssets.cats, seed%16, x + unit*0.5, y + h - catS - unit*0.2, catS, catS);
+    }
+    // 植物
+    if (loadedAssets.plants) {
+      const pS = unit * 1.3;
+      drawSpriteFrame(ctx, loadedAssets.plants, (seed+4)%16, x + w*0.4, y + h - pS - unit*0.2, pS, pS);
+      drawSpriteFrame(ctx, loadedAssets.plants, (seed+9)%16, x + unit*0.3, y + h - pS*0.8 - unit*0.5, pS*0.8, pS*0.8);
+    }
+  } else if (roomId === 'canteen') {
+    // 植物（多处放置）
+    if (loadedAssets.plants) {
+      const pS = unit * 1.3;
+      drawSpriteFrame(ctx, loadedAssets.plants, (seed+1)%16, x + unit*0.5, y + h - pS - unit*0.2, pS, pS);
+      drawSpriteFrame(ctx, loadedAssets.plants, (seed+6)%16, x + w - pS - unit*0.3, y + h - pS - unit*0.2, pS, pS);
+    }
+    // 花
+    if (loadedAssets.flowers) {
+      const fS = unit * 1;
+      drawSpriteFrame(ctx, loadedAssets.flowers, (seed+8)%16, x + w*0.3, y + h - fS - unit*0.3, fS, fS);
+      drawSpriteFrame(ctx, loadedAssets.flowers, (seed+11)%16, x + w*0.6, y + h - fS - unit*0.2, fS, fS);
+    }
+    // 猫在角落
+    if (loadedAssets.cats) {
+      const catS = unit * 1.2;
+      drawSpriteFrame(ctx, loadedAssets.cats, (seed+3)%16, x + w*0.5, y + h - catS - unit*0.1, catS, catS);
+    }
+  } else if (roomId === 'home') {
+    // 猫坐沙发（重点装饰！）
+    if (loadedAssets.star_idle) {
+      const sSize = unit * (isZoomed ? 3.5 : 2.5);
+      const sFrame = Math.floor(t / 120) % 48;
+      drawSpriteFrame(ctx, loadedAssets.star_idle, sFrame, x + unit*0.5, y + h - sSize - unit*0.2, sSize, sSize);
+    }
+    // 猫（第二只，右下）
+    if (loadedAssets.cats) {
+      const catS = unit * 1.3;
+      drawSpriteFrame(ctx, loadedAssets.cats, (seed+2)%16, x + w - catS - unit*0.5, y + h - catS - unit*0.2, catS, catS);
+    }
+    // 植物
+    if (loadedAssets.plants) {
+      const pS = unit * 1.2;
+      drawSpriteFrame(ctx, loadedAssets.plants, (seed+7)%16, x + w - pS - unit*0.3, y + h*0.4, pS, pS);
+    }
+    // 花
+    if (loadedAssets.flowers) {
+      const fS = unit * 1;
+      drawSpriteFrame(ctx, loadedAssets.flowers, (seed+5)%16, x + w*0.55, y + h - fS - unit*0.3, fS, fS);
+    }
+  }
+}
 
 // 全局素材缓存
 const loadedAssets = {};
@@ -1051,76 +1224,8 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         const rx=pad, ry=pad, rw=cw-2*pad, rh=ch-2*pad;
         const innerX=rx+bw, innerY=ry+bw, innerW=rw-2*bw, innerH=rh-2*bw;
 
-        // ── 房间背景：使用 office_bg（保持16:9比例）+ 手绘家具 ──
-        const bgAsset = assetsReady && loadedAssets.office_bg;
-        if (bgAsset) {
-          // 保持 16:9 比例，居中裁切（不拉伸）
-          const bgW = bgAsset.img.naturalWidth, bgH = bgAsset.img.naturalHeight;
-          const targetRatio = innerW / innerH;
-          const bgRatio = bgW / bgH;
-          let sx=0, sy=0, sw=bgW, sh=bgH;
-          if (targetRatio > bgRatio) {
-            // 目标更宽，裁上下
-            sh = bgW / targetRatio;
-            sy = (bgH - sh) / 2;
-          } else {
-            // 目标更高，裁左右
-            sw = bgH * targetRatio;
-            sx = (bgW - sw) / 2;
-          }
-          ctx.drawImage(bgAsset.img, sx, sy, sw, sh, innerX, innerY, innerW, innerH);
-          // 不同房间用色调叠加区分
-          const roomTints = {
-            boss: 'rgba(60,30,50,0.25)',
-            meeting: 'rgba(30,40,60,0.2)',
-            pantry: 'rgba(40,50,30,0.2)',
-            canteen: 'rgba(50,40,20,0.2)',
-            home: 'rgba(40,30,50,0.25)',
-          };
-          if (roomTints[loc.id]) {
-            ctx.fillStyle = roomTints[loc.id];
-            ctx.fillRect(innerX, innerY, innerW, innerH);
-          }
-        } else {
-          drawFloor(ctx, innerX, innerY, innerW, innerH, loc.color);
-          drawRoomFurniture(ctx, innerX, innerY, innerW, innerH, loc.id, true);
-        }
-
-        // ── 装饰精灵（按背景比例合理放置）──
-        if (assetsReady) {
-          const seed = loc.id.charCodeAt(0) * 7 + loc.id.charCodeAt(loc.id.length-1) * 13;
-          // 基准尺寸：按房间高度的比例，和背景的像素世界协调
-          const unit = innerH / 12; // 1个"单位"≈背景中一个家具的尺寸
-
-          // 猫（茶水间/家，固定在左下角地面）
-          if ((loc.id === 'pantry' || loc.id === 'home') && loadedAssets.cats) {
-            const catSize = unit * 1.2;
-            drawSpriteFrame(ctx, loadedAssets.cats, seed % 16, innerX + unit*0.5, innerY + innerH - catSize - unit*0.3, catSize, catSize);
-          }
-          // 植物（右下角，固定变体）
-          if (loadedAssets.plants) {
-            const plantSize = unit * 1;
-            drawSpriteFrame(ctx, loadedAssets.plants, (seed+3)%16, innerX + innerW - plantSize - unit*0.5, innerY + innerH - plantSize - unit*0.3, plantSize, plantSize);
-          }
-          // 咖啡机（茶水间，右上区域，真动画12.5fps）
-          if (loc.id === 'pantry' && loadedAssets.coffee) {
-            const coffeeSize = unit * 1.5;
-            const coffeeFrame = Math.floor(t / 80) % 96;
-            drawSpriteFrame(ctx, loadedAssets.coffee, coffeeFrame, innerX + innerW - coffeeSize - unit, innerY + unit*0.5, coffeeSize, coffeeSize);
-          }
-          // 花（固定变体，地面上）
-          if ((loc.id === 'home' || loc.id === 'boss') && loadedAssets.flowers) {
-            const flowerSize = unit * 0.8;
-            drawSpriteFrame(ctx, loadedAssets.flowers, (seed+5)%16, innerX + innerW*0.45, innerY + innerH - flowerSize - unit*0.2, flowerSize, flowerSize);
-          }
-          // 服务器机房（工位区右上，真动画6fps）
-          if (loc.id === 'desk' && loadedAssets.serverroom) {
-            const srvH2 = unit * 3;
-            const srvW2 = srvH2 * (180/251);
-            const srvFrame = Math.floor(t/166) % 40;
-            drawSpriteFrame(ctx, loadedAssets.serverroom, srvFrame, innerX + innerW - srvW2 - unit*0.5, innerY + unit*0.3, srvW2, srvH2);
-          }
-        }
+        // ── 房间背景 + 装饰（每个房间独特风格）──
+        drawRoomBg(ctx, innerX, innerY, innerW, innerH, loc.id, t, true);
 
         drawBorder(ctx, rx, ry, rw, rh);
 
@@ -1235,50 +1340,8 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           const rx=pad+col*(rw+gap), ry=pad+row*(rh+gap);
           const oInnerX=rx+bw, oInnerY=ry+bw, oInnerW=rw-2*bw, oInnerH=rh-2*bw;
 
-          // 房间背景：使用 office_bg（保持比例裁切）
-          const bgAsset = assetsReady && loadedAssets.office_bg;
-          if (bgAsset) {
-            const bgW = bgAsset.img.naturalWidth, bgH = bgAsset.img.naturalHeight;
-            const targetRatio = oInnerW / oInnerH;
-            const bgRatio = bgW / bgH;
-            let sx=0, sy=0, sw2=bgW, sh2=bgH;
-            if (targetRatio > bgRatio) { sh2 = bgW / targetRatio; sy = (bgH - sh2) / 2; }
-            else { sw2 = bgH * targetRatio; sx = (bgW - sw2) / 2; }
-            ctx.drawImage(bgAsset.img, sx, sy, sw2, sh2, oInnerX, oInnerY, oInnerW, oInnerH);
-            const roomTints = {
-              boss: 'rgba(60,30,50,0.3)', meeting: 'rgba(30,40,60,0.25)',
-              pantry: 'rgba(40,50,30,0.25)', canteen: 'rgba(50,40,20,0.25)',
-              home: 'rgba(40,30,50,0.3)', desk: 'rgba(20,30,40,0.2)',
-            };
-            if (roomTints[loc.id]) { ctx.fillStyle = roomTints[loc.id]; ctx.fillRect(oInnerX, oInnerY, oInnerW, oInnerH); }
-          } else {
-            drawFloor(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.color);
-          }
-
-          // 缩略图装饰精灵
-          if (assetsReady) {
-            const seed = loc.id.charCodeAt(0) * 7 + loc.id.charCodeAt(loc.id.length-1) * 13;
-            const oUnit = oInnerH / 12;
-            if ((loc.id === 'pantry' || loc.id === 'home') && loadedAssets.cats) {
-              const catS = oUnit * 1.2;
-              drawSpriteFrame(ctx, loadedAssets.cats, seed % 16, oInnerX + oUnit*0.3, oInnerY + oInnerH - catS - oUnit*0.2, catS, catS);
-            }
-            if (loadedAssets.plants) {
-              const plantS = oUnit * 1;
-              drawSpriteFrame(ctx, loadedAssets.plants, (seed+3)%16, oInnerX + oInnerW - plantS - oUnit*0.3, oInnerY + oInnerH - plantS - oUnit*0.2, plantS, plantS);
-            }
-            if (loc.id === 'pantry' && loadedAssets.coffee) {
-              const coffeeS = oUnit * 1.3;
-              const cf2 = Math.floor(t/80) % 96;
-              drawSpriteFrame(ctx, loadedAssets.coffee, cf2, oInnerX + oInnerW * 0.65, oInnerY + oUnit*0.3, coffeeS, coffeeS);
-            }
-            if (loc.id === 'desk' && loadedAssets.serverroom) {
-              const srvH2 = oUnit * 2.5;
-              const srvW2 = srvH2 * (180/251);
-              const srvFrame = Math.floor(t/166) % 40;
-              drawSpriteFrame(ctx, loadedAssets.serverroom, srvFrame, oInnerX + oInnerW - srvW2 - oUnit*0.3, oInnerY + oUnit*0.2, srvW2, srvH2);
-            }
-          }
+          // 房间背景 + 装饰（每个房间独特风格）
+          drawRoomBg(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.id, t, false);
 
           drawBorder(ctx, rx, ry, rw, rh);
           // Label — gold plaque
