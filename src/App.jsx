@@ -1051,68 +1051,55 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         const rx=pad, ry=pad, rw=cw-2*pad, rh=ch-2*pad;
         const innerX=rx+bw, innerY=ry+bw, innerW=rw-2*bw, innerH=rh-2*bw;
 
-        // ── 使用 Star-Office 素材渲染房间背景 ──
-        const useOfficeBg = assetsReady && loadedAssets.office_bg && (loc.id === 'desk' || loc.id === 'boss');
-        if (useOfficeBg) {
-          // 用像素办公室背景图铺满房间区域
-          const bgImg = loadedAssets.office_bg.img;
-          ctx.drawImage(bgImg, 0, 0, bgImg.naturalWidth, bgImg.naturalHeight, innerX, innerY, innerW, innerH);
-          // 半透明色调叠加，让不同房间有区分
-          if (loc.id === 'boss') {
-            ctx.fillStyle = 'rgba(80,40,60,0.2)';
-            ctx.fillRect(innerX, innerY, innerW, innerH);
-          }
-        } else {
-          drawFloor(ctx, innerX, innerY, innerW, innerH, loc.color);
-          drawRoomFurniture(ctx, innerX, innerY, innerW, innerH, loc.id, true);
-        }
+        // ── 房间背景：保持手绘家具 ──
+        drawFloor(ctx, innerX, innerY, innerW, innerH, loc.color);
+        drawRoomFurniture(ctx, innerX, innerY, innerW, innerH, loc.id, true);
 
-        // ── 精灵表装饰动画 ──
+        // ── Star-Office 装饰精灵叠加（静态变体 + 少数真动画）──
         if (assetsReady) {
-          const animFrame = Math.floor(t / 120); // ~8fps 通用动画时钟
-          const slowFrame = Math.floor(t / 200); // ~5fps 慢动画
-          // 猫（茶水间/家/工位区右下角）
-          if ((loc.id === 'pantry' || loc.id === 'home' || loc.id === 'desk') && loadedAssets.cats) {
-            const catFrame = slowFrame % 16;
-            const catSize = Math.min(innerW * 0.12, 64);
-            drawSpriteFrame(ctx, loadedAssets.cats, catFrame, innerX + innerW * 0.06, innerY + innerH - catSize - 4, catSize, catSize);
+          // 用房间ID生成稳定的伪随机种子，每个房间固定显示某一变体
+          const seed = loc.id.charCodeAt(0) * 7 + loc.id.charCodeAt(loc.id.length-1) * 13;
+          // 猫（茶水间/家 — 静态变体，不循环）
+          if ((loc.id === 'pantry' || loc.id === 'home') && loadedAssets.cats) {
+            const catFrame = seed % 16;
+            const catSize = Math.min(innerW * 0.1, 56);
+            drawSpriteFrame(ctx, loadedAssets.cats, catFrame, innerX + innerW * 0.06, innerY + innerH - catSize - 6, catSize, catSize);
           }
-          // 植物（大部分房间都有）
+          // 植物（静态变体，每个房间固定一种）
           if (loadedAssets.plants) {
-            const plantFrame = (Math.floor(t / 2000) + loc.id.charCodeAt(0)) % 16;
-            const plantSize = Math.min(innerW * 0.1, 52);
-            drawSpriteFrame(ctx, loadedAssets.plants, plantFrame, innerX + innerW - plantSize - 6, innerY + innerH - plantSize - 4, plantSize, plantSize);
-            if (loc.id === 'desk' || loc.id === 'meeting' || loc.id === 'boss') {
-              const plantFrame2 = (plantFrame + 5) % 16;
-              drawSpriteFrame(ctx, loadedAssets.plants, plantFrame2, innerX + 4, innerY + innerH - plantSize * 0.8 - 4, plantSize * 0.8, plantSize * 0.8);
+            const plantFrame = (seed + 3) % 16;
+            const plantSize = Math.min(innerW * 0.08, 44);
+            drawSpriteFrame(ctx, loadedAssets.plants, plantFrame, innerX + innerW - plantSize - 8, innerY + innerH - plantSize - 6, plantSize, plantSize);
+            if (loc.id === 'boss' || loc.id === 'meeting') {
+              const plantFrame2 = (seed + 9) % 16;
+              drawSpriteFrame(ctx, loadedAssets.plants, plantFrame2, innerX + 6, innerY + innerH - plantSize * 0.8 - 6, plantSize * 0.8, plantSize * 0.8);
             }
           }
-          // 咖啡机（茶水间）
+          // 咖啡机（茶水间 — 这个是真动画，96帧循环）
           if (loc.id === 'pantry' && loadedAssets.coffee) {
-            const coffeeFrame = animFrame % 96;
-            const coffeeSize = Math.min(innerW * 0.2, 80);
-            drawSpriteFrame(ctx, loadedAssets.coffee, coffeeFrame, innerX + innerW * 0.7, innerY + 8, coffeeSize, coffeeSize);
+            const coffeeFrame = Math.floor(t / 80) % 96; // ~12.5fps
+            const coffeeSize = Math.min(innerW * 0.18, 72);
+            drawSpriteFrame(ctx, loadedAssets.coffee, coffeeFrame, innerX + innerW * 0.72, innerY + 10, coffeeSize, coffeeSize);
           }
-          // 花（家/Kelly办公室）
+          // 花（静态变体）
           if ((loc.id === 'home' || loc.id === 'boss') && loadedAssets.flowers) {
-            const flowerFrame = slowFrame % 16;
-            const flowerSize = Math.min(innerW * 0.08, 36);
-            drawSpriteFrame(ctx, loadedAssets.flowers, flowerFrame, innerX + innerW * 0.45, innerY + innerH - flowerSize - 2, flowerSize, flowerSize);
+            const flowerFrame = (seed + 5) % 16;
+            const flowerSize = Math.min(innerW * 0.06, 32);
+            drawSpriteFrame(ctx, loadedAssets.flowers, flowerFrame, innerX + innerW * 0.45, innerY + innerH - flowerSize - 4, flowerSize, flowerSize);
           }
-          // 海报（会议室/工位区墙上）
+          // 海报（静态，固定在墙上）
           if ((loc.id === 'meeting' || loc.id === 'desk') && loadedAssets.posters) {
-            const posterFrame = (loc.id.charCodeAt(0) * 3) % 32;
-            const posterW = Math.min(innerW * 0.12, 48);
-            const posterH = posterW;
-            drawSpriteFrame(ctx, loadedAssets.posters, posterFrame, innerX + innerW * 0.35, innerY + 4, posterW, posterH);
-            drawSpriteFrame(ctx, loadedAssets.posters, (posterFrame + 7) % 32, innerX + innerW * 0.5, innerY + 4, posterW, posterH);
+            const posterFrame = seed % 32;
+            const posterW = Math.min(innerW * 0.1, 42);
+            drawSpriteFrame(ctx, loadedAssets.posters, posterFrame, innerX + innerW * 0.35, innerY + 6, posterW, posterW);
+            drawSpriteFrame(ctx, loadedAssets.posters, (posterFrame + 11) % 32, innerX + innerW * 0.48, innerY + 6, posterW, posterW);
           }
-          // 服务器机房动画（工位区右上角）
+          // 服务器机房灯光（真动画，40帧6fps）
           if (loc.id === 'desk' && loadedAssets.serverroom) {
-            const srvFrame = Math.floor(t / 166) % 40; // ~6fps
-            const srvH = Math.min(innerH * 0.35, 90);
+            const srvFrame = Math.floor(t / 166) % 40;
+            const srvH = Math.min(innerH * 0.3, 80);
             const srvW = srvH * (180 / 251);
-            drawSpriteFrame(ctx, loadedAssets.serverroom, srvFrame, innerX + innerW - srvW - 8, innerY + 4, srvW, srvH);
+            drawSpriteFrame(ctx, loadedAssets.serverroom, srvFrame, innerX + innerW - srvW - 10, innerY + 6, srvW, srvH);
           }
         }
 
@@ -1138,10 +1125,9 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         ctx.fillStyle='#ffd700'; ctx.font='bold 11px monospace';
         ctx.fillText('◀ 返回', bbx+8, bby+5);
 
-        // NPCs large - 使用工位系统 + guest精灵表
+        // NPCs large - 使用工位系统 + 自有像素精灵
         const sc=5, sw=12*sc, sh=18*sc;
         const nRects=[];
-        const guestKeys = ['guest1','guest2','guest3','guest4','guest5','guest6'];
         present.forEach((npc,i)=>{
           const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh, t, loc.id, true);
           const nx = pos.x;
@@ -1150,16 +1136,9 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           // Shadow
           ctx.fillStyle='rgba(0,0,0,0.3)';
           ctx.beginPath(); ctx.ellipse(nx+sw/2, ny+sh+3, sw*0.4, 5, 0, 0, Math.PI*2); ctx.fill();
-          // Sprite — 尝试用 guest 精灵表，回退到像素精灵
-          const guestAsset = assetsReady && loadedAssets[guestKeys[i % guestKeys.length]];
-          if (guestAsset && guestAsset.img && guestAsset.img.naturalWidth > 40) {
-            // guest精灵表可用，放大绘制
-            const gFrame = Math.floor(t / 250) % (guestAsset.cols * (guestAsset.rows || 1));
-            drawSpriteFrame(ctx, guestAsset, gFrame, nx + sw/2 - 32, ny + sh/2 - 32, 64, 64);
-          } else {
-            const sc2 = spriteCacheRef.current[npc.id]?.l;
-            if (sc2) ctx.drawImage(sc2, nx, ny);
-          }
+          // Sprite — 始终使用自有像素精灵（风格一致）
+          const sc2 = spriteCacheRef.current[npc.id]?.l;
+          if (sc2) ctx.drawImage(sc2, nx, ny);
           // Selection highlight — gold glow
           if (npc.id===sel) {
             ctx.strokeStyle='#ffd700'; ctx.lineWidth=2;
@@ -1214,31 +1193,24 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           const rx=pad+col*(rw+gap), ry=pad+row*(rh+gap);
           const oInnerX=rx+bw, oInnerY=ry+bw, oInnerW=rw-2*bw, oInnerH=rh-2*bw;
 
-          // 房间背景：desk/boss 用 Star-Office 背景图，其他保持手绘
-          const useOvBg = assetsReady && loadedAssets.office_bg && (loc.id === 'desk' || loc.id === 'boss');
-          if (useOvBg) {
-            const bgI = loadedAssets.office_bg.img;
-            ctx.drawImage(bgI, 0, 0, bgI.naturalWidth, bgI.naturalHeight, oInnerX, oInnerY, oInnerW, oInnerH);
-            if (loc.id === 'boss') { ctx.fillStyle='rgba(80,40,60,0.25)'; ctx.fillRect(oInnerX,oInnerY,oInnerW,oInnerH); }
-          } else {
-            drawFloor(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.color);
-            drawRoomFurniture(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.id, false);
-          }
+          // 房间背景：保持手绘家具
+          drawFloor(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.color);
+          drawRoomFurniture(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.id, false);
 
-          // 缩略图装饰精灵（小尺寸）
+          // 缩略图装饰精灵（静态变体，不循环）
           if (assetsReady) {
-            const miniSize = Math.min(oInnerW * 0.14, 28);
+            const seed = loc.id.charCodeAt(0) * 7 + loc.id.charCodeAt(loc.id.length-1) * 13;
+            const miniSize = Math.min(oInnerW * 0.12, 24);
             if (loadedAssets.cats && (loc.id === 'pantry' || loc.id === 'home')) {
-              const cf = (Math.floor(t/300) + i) % 16;
-              drawSpriteFrame(ctx, loadedAssets.cats, cf, oInnerX + 4, oInnerY + oInnerH - miniSize - 2, miniSize, miniSize);
+              drawSpriteFrame(ctx, loadedAssets.cats, seed % 16, oInnerX + 4, oInnerY + oInnerH - miniSize - 2, miniSize, miniSize);
             }
             if (loadedAssets.plants) {
-              const pf = (Math.floor(t/3000) + loc.id.charCodeAt(0)) % 16;
-              drawSpriteFrame(ctx, loadedAssets.plants, pf, oInnerX + oInnerW - miniSize - 3, oInnerY + oInnerH - miniSize - 2, miniSize, miniSize);
+              drawSpriteFrame(ctx, loadedAssets.plants, (seed + 3) % 16, oInnerX + oInnerW - miniSize - 3, oInnerY + oInnerH - miniSize - 2, miniSize, miniSize);
             }
+            // 咖啡机（茶水间，真动画）
             if (loc.id === 'pantry' && loadedAssets.coffee) {
-              const cf2 = Math.floor(t/150) % 96;
-              const coffeeS = Math.min(oInnerW * 0.18, 32);
+              const cf2 = Math.floor(t/80) % 96;
+              const coffeeS = Math.min(oInnerW * 0.15, 28);
               drawSpriteFrame(ctx, loadedAssets.coffee, cf2, oInnerX + oInnerW * 0.65, oInnerY + 4, coffeeS, coffeeS);
             }
           }
