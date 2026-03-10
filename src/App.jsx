@@ -1051,55 +1051,74 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         const rx=pad, ry=pad, rw=cw-2*pad, rh=ch-2*pad;
         const innerX=rx+bw, innerY=ry+bw, innerW=rw-2*bw, innerH=rh-2*bw;
 
-        // ── 房间背景：保持手绘家具 ──
-        drawFloor(ctx, innerX, innerY, innerW, innerH, loc.color);
-        drawRoomFurniture(ctx, innerX, innerY, innerW, innerH, loc.id, true);
+        // ── 房间背景：使用 office_bg（保持16:9比例）+ 手绘家具 ──
+        const bgAsset = assetsReady && loadedAssets.office_bg;
+        if (bgAsset) {
+          // 保持 16:9 比例，居中裁切（不拉伸）
+          const bgW = bgAsset.img.naturalWidth, bgH = bgAsset.img.naturalHeight;
+          const targetRatio = innerW / innerH;
+          const bgRatio = bgW / bgH;
+          let sx=0, sy=0, sw=bgW, sh=bgH;
+          if (targetRatio > bgRatio) {
+            // 目标更宽，裁上下
+            sh = bgW / targetRatio;
+            sy = (bgH - sh) / 2;
+          } else {
+            // 目标更高，裁左右
+            sw = bgH * targetRatio;
+            sx = (bgW - sw) / 2;
+          }
+          ctx.drawImage(bgAsset.img, sx, sy, sw, sh, innerX, innerY, innerW, innerH);
+          // 不同房间用色调叠加区分
+          const roomTints = {
+            boss: 'rgba(60,30,50,0.25)',
+            meeting: 'rgba(30,40,60,0.2)',
+            pantry: 'rgba(40,50,30,0.2)',
+            canteen: 'rgba(50,40,20,0.2)',
+            home: 'rgba(40,30,50,0.25)',
+          };
+          if (roomTints[loc.id]) {
+            ctx.fillStyle = roomTints[loc.id];
+            ctx.fillRect(innerX, innerY, innerW, innerH);
+          }
+        } else {
+          drawFloor(ctx, innerX, innerY, innerW, innerH, loc.color);
+          drawRoomFurniture(ctx, innerX, innerY, innerW, innerH, loc.id, true);
+        }
 
-        // ── Star-Office 装饰精灵叠加（静态变体 + 少数真动画）──
+        // ── 装饰精灵（按背景比例合理放置）──
         if (assetsReady) {
-          // 用房间ID生成稳定的伪随机种子，每个房间固定显示某一变体
           const seed = loc.id.charCodeAt(0) * 7 + loc.id.charCodeAt(loc.id.length-1) * 13;
-          // 猫（茶水间/家 — 静态变体，不循环）
+          // 基准尺寸：按房间高度的比例，和背景的像素世界协调
+          const unit = innerH / 12; // 1个"单位"≈背景中一个家具的尺寸
+
+          // 猫（茶水间/家，固定在左下角地面）
           if ((loc.id === 'pantry' || loc.id === 'home') && loadedAssets.cats) {
-            const catFrame = seed % 16;
-            const catSize = Math.min(innerW * 0.1, 56);
-            drawSpriteFrame(ctx, loadedAssets.cats, catFrame, innerX + innerW * 0.06, innerY + innerH - catSize - 6, catSize, catSize);
+            const catSize = unit * 1.2;
+            drawSpriteFrame(ctx, loadedAssets.cats, seed % 16, innerX + unit*0.5, innerY + innerH - catSize - unit*0.3, catSize, catSize);
           }
-          // 植物（静态变体，每个房间固定一种）
+          // 植物（右下角，固定变体）
           if (loadedAssets.plants) {
-            const plantFrame = (seed + 3) % 16;
-            const plantSize = Math.min(innerW * 0.08, 44);
-            drawSpriteFrame(ctx, loadedAssets.plants, plantFrame, innerX + innerW - plantSize - 8, innerY + innerH - plantSize - 6, plantSize, plantSize);
-            if (loc.id === 'boss' || loc.id === 'meeting') {
-              const plantFrame2 = (seed + 9) % 16;
-              drawSpriteFrame(ctx, loadedAssets.plants, plantFrame2, innerX + 6, innerY + innerH - plantSize * 0.8 - 6, plantSize * 0.8, plantSize * 0.8);
-            }
+            const plantSize = unit * 1;
+            drawSpriteFrame(ctx, loadedAssets.plants, (seed+3)%16, innerX + innerW - plantSize - unit*0.5, innerY + innerH - plantSize - unit*0.3, plantSize, plantSize);
           }
-          // 咖啡机（茶水间 — 这个是真动画，96帧循环）
+          // 咖啡机（茶水间，右上区域，真动画12.5fps）
           if (loc.id === 'pantry' && loadedAssets.coffee) {
-            const coffeeFrame = Math.floor(t / 80) % 96; // ~12.5fps
-            const coffeeSize = Math.min(innerW * 0.18, 72);
-            drawSpriteFrame(ctx, loadedAssets.coffee, coffeeFrame, innerX + innerW * 0.72, innerY + 10, coffeeSize, coffeeSize);
+            const coffeeSize = unit * 1.5;
+            const coffeeFrame = Math.floor(t / 80) % 96;
+            drawSpriteFrame(ctx, loadedAssets.coffee, coffeeFrame, innerX + innerW - coffeeSize - unit, innerY + unit*0.5, coffeeSize, coffeeSize);
           }
-          // 花（静态变体）
+          // 花（固定变体，地面上）
           if ((loc.id === 'home' || loc.id === 'boss') && loadedAssets.flowers) {
-            const flowerFrame = (seed + 5) % 16;
-            const flowerSize = Math.min(innerW * 0.06, 32);
-            drawSpriteFrame(ctx, loadedAssets.flowers, flowerFrame, innerX + innerW * 0.45, innerY + innerH - flowerSize - 4, flowerSize, flowerSize);
+            const flowerSize = unit * 0.8;
+            drawSpriteFrame(ctx, loadedAssets.flowers, (seed+5)%16, innerX + innerW*0.45, innerY + innerH - flowerSize - unit*0.2, flowerSize, flowerSize);
           }
-          // 海报（静态，固定在墙上）
-          if ((loc.id === 'meeting' || loc.id === 'desk') && loadedAssets.posters) {
-            const posterFrame = seed % 32;
-            const posterW = Math.min(innerW * 0.1, 42);
-            drawSpriteFrame(ctx, loadedAssets.posters, posterFrame, innerX + innerW * 0.35, innerY + 6, posterW, posterW);
-            drawSpriteFrame(ctx, loadedAssets.posters, (posterFrame + 11) % 32, innerX + innerW * 0.48, innerY + 6, posterW, posterW);
-          }
-          // 服务器机房灯光（真动画，40帧6fps）
+          // 服务器机房（工位区右上，真动画6fps）
           if (loc.id === 'desk' && loadedAssets.serverroom) {
-            const srvFrame = Math.floor(t / 166) % 40;
-            const srvH = Math.min(innerH * 0.3, 80);
-            const srvW = srvH * (180 / 251);
-            drawSpriteFrame(ctx, loadedAssets.serverroom, srvFrame, innerX + innerW - srvW - 10, innerY + 6, srvW, srvH);
+            const srvH2 = unit * 3;
+            const srvW2 = srvH2 * (180/251);
+            const srvFrame = Math.floor(t/166) % 40;
+            drawSpriteFrame(ctx, loadedAssets.serverroom, srvFrame, innerX + innerW - srvW2 - unit*0.5, innerY + unit*0.3, srvW2, srvH2);
           }
         }
 
@@ -1125,55 +1144,73 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         ctx.fillStyle='#ffd700'; ctx.font='bold 11px monospace';
         ctx.fillText('◀ 返回', bbx+8, bby+5);
 
-        // NPCs large - 使用工位系统 + 自有像素精灵
-        const sc=5, sw=12*sc, sh=18*sc;
+        // NPCs — 按性格分配 guest 精灵 + 自有像素精灵回退
+        const NPC_GUEST_MAP = {
+          kelly: 'guest1',   // 优雅Boss
+          pine: 'guest2',    // 年轻Leader
+          frank: 'guest3',   // 摄影达人
+          benzema: 'guest4', // 技术宅
+          yanfei: 'guest5',  // 活力女
+          haoran: 'guest6',  // 稳重奶爸
+          xinyi: 'guest1',   // 温柔（复用1，但用不同帧）
+        };
+        const unit = innerH / 12;
+        const sprSize = Math.round(unit * 2.2); // guest精灵显示尺寸（和背景家具协调）
         const nRects=[];
         present.forEach((npc,i)=>{
-          const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh, t, loc.id, true);
+          const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sprSize, sprSize, t, loc.id, true);
           const nx = pos.x;
-          const floatY = Math.sin(t/1200+i*1.7)*0.8;
+          const floatY = Math.sin(t/1200+i*1.7)*0.6;
           const ny = pos.y + floatY;
           // Shadow
-          ctx.fillStyle='rgba(0,0,0,0.3)';
-          ctx.beginPath(); ctx.ellipse(nx+sw/2, ny+sh+3, sw*0.4, 5, 0, 0, Math.PI*2); ctx.fill();
-          // Sprite — 始终使用自有像素精灵（风格一致）
-          const sc2 = spriteCacheRef.current[npc.id]?.l;
-          if (sc2) ctx.drawImage(sc2, nx, ny);
-          // Selection highlight — gold glow
+          ctx.fillStyle='rgba(0,0,0,0.25)';
+          ctx.beginPath(); ctx.ellipse(nx+sprSize/2, ny+sprSize+2, sprSize*0.35, 4, 0, 0, Math.PI*2); ctx.fill();
+          // Guest 精灵（4帧走路动画 ~4fps）
+          const guestKey = NPC_GUEST_MAP[npc.id];
+          const guestAsset = assetsReady && guestKey && loadedAssets[guestKey];
+          if (guestAsset && guestAsset.img && guestAsset.cols) {
+            // xinyi 用第二行帧（row 1）避免和 kelly 重复
+            const rowOffset = (npc.id === 'xinyi') ? guestAsset.cols : 0;
+            const gFrame = rowOffset + Math.floor(t / 250) % guestAsset.cols;
+            drawSpriteFrame(ctx, guestAsset, gFrame, nx, ny, sprSize, sprSize);
+          } else {
+            // 回退到自有像素精灵
+            const sc2 = spriteCacheRef.current[npc.id]?.l;
+            if (sc2) ctx.drawImage(sc2, nx, ny);
+          }
+          // Selection highlight
           if (npc.id===sel) {
             ctx.strokeStyle='#ffd700'; ctx.lineWidth=2;
-            ctx.strokeRect(nx-4,ny-4,sw+8,sh+28);
+            ctx.strokeRect(nx-3,ny-3,sprSize+6,sprSize+20);
             ctx.fillStyle='rgba(255,215,0,0.06)';
-            ctx.fillRect(nx-4,ny-4,sw+8,sh+28);
+            ctx.fillRect(nx-3,ny-3,sprSize+6,sprSize+20);
           }
           // Name
-          ctx.fillStyle='#eee'; ctx.font='bold 12px monospace'; ctx.textAlign='center';
-          ctx.fillText(npc.name, nx+sw/2, ny+sh+8); ctx.textAlign='left';
+          ctx.fillStyle='#eee'; ctx.font='bold 11px monospace'; ctx.textAlign='center';
+          ctx.fillText(npc.name, nx+sprSize/2, ny+sprSize+6); ctx.textAlign='left';
           // Mood bar
-          const mbw=32, mbx=nx+(sw-mbw)/2, mby=ny+sh+22;
-          ctx.fillStyle='#141722'; ctx.fillRect(mbx-1,mby-1,mbw+2,6);
-          ctx.fillStyle='#0e1119'; ctx.fillRect(mbx,mby,mbw,4);
+          const mbw=Math.min(30, sprSize), mbx=nx+(sprSize-mbw)/2, mby=ny+sprSize+14;
+          ctx.fillStyle='#0e1119'; ctx.fillRect(mbx,mby,mbw,3);
           ctx.fillStyle=moodColor(npc.state.moodValue);
-          ctx.fillRect(mbx,mby,mbw*npc.state.moodValue/100,4);
+          ctx.fillRect(mbx,mby,mbw*npc.state.moodValue/100,3);
           // Thought bubble
           if (npc.thought||npc.action) {
             const txt = npc.thought || npc.action;
-            const display = txt.length>14 ? txt.slice(0,14)+'..' : txt;
+            const display = txt.length>12 ? txt.slice(0,12)+'..' : txt;
             ctx.font='10px monospace';
-            const tw2 = ctx.measureText(display).width+12;
-            const bx2=nx+sw/2-tw2/2, by2=ny-20;
+            const tw2 = ctx.measureText(display).width+10;
+            const cx2=nx+sprSize/2, bx2=cx2-tw2/2, by2=ny-16;
             ctx.fillStyle='rgba(20,23,34,0.95)';
-            ctx.beginPath(); ctx.roundRect(bx2,by2,tw2,18,4); ctx.fill();
-            ctx.strokeStyle = npc.thought ? '#ffd700' : '#2a2a45';
-            ctx.lineWidth=1;
-            ctx.beginPath(); ctx.roundRect(bx2,by2,tw2,18,4); ctx.stroke();
+            ctx.beginPath(); ctx.roundRect(bx2,by2,tw2,16,3); ctx.fill();
+            ctx.strokeStyle = npc.thought ? '#ffd700' : '#2a2a45'; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.roundRect(bx2,by2,tw2,16,3); ctx.stroke();
             ctx.fillStyle='rgba(20,23,34,0.95)';
-            ctx.beginPath(); ctx.moveTo(nx+sw/2-4,by2+18); ctx.lineTo(nx+sw/2,by2+22); ctx.lineTo(nx+sw/2+4,by2+18); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(cx2-3,by2+16); ctx.lineTo(cx2,by2+19); ctx.lineTo(cx2+3,by2+16); ctx.fill();
             ctx.fillStyle = npc.thought ? '#ffd700' : '#9ca3af';
             ctx.textAlign='center';
-            ctx.fillText(display, nx+sw/2, by2+4); ctx.textAlign='left';
+            ctx.fillText(display, cx2, by2+3); ctx.textAlign='left';
           }
-          nRects.push({id:npc.id, x:nx-4, y:ny-4, w:sw+8, h:sh+32});
+          nRects.push({id:npc.id, x:nx-3, y:ny-3, w:sprSize+6, h:sprSize+22});
         });
         if (present.length===0) {
           ctx.fillStyle='#9ca3af'; ctx.font='12px monospace'; ctx.textAlign='center';
@@ -1188,30 +1225,58 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
         const rw = Math.floor((cw-2*pad-(cols-1)*gap)/cols);
         const rh = Math.floor((ch-2*pad-(rows-1)*gap)/rows);
         const rects=[];
+        const NPC_GUEST_MAP_OV = {
+          kelly: 'guest1', pine: 'guest2', frank: 'guest3',
+          benzema: 'guest4', yanfei: 'guest5', haoran: 'guest6',
+          xinyi: 'guest1',
+        };
         locs.forEach((loc,i)=>{
           const col=i%cols, row=Math.floor(i/cols);
           const rx=pad+col*(rw+gap), ry=pad+row*(rh+gap);
           const oInnerX=rx+bw, oInnerY=ry+bw, oInnerW=rw-2*bw, oInnerH=rh-2*bw;
 
-          // 房间背景：保持手绘家具
-          drawFloor(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.color);
-          drawRoomFurniture(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.id, false);
+          // 房间背景：使用 office_bg（保持比例裁切）
+          const bgAsset = assetsReady && loadedAssets.office_bg;
+          if (bgAsset) {
+            const bgW = bgAsset.img.naturalWidth, bgH = bgAsset.img.naturalHeight;
+            const targetRatio = oInnerW / oInnerH;
+            const bgRatio = bgW / bgH;
+            let sx=0, sy=0, sw2=bgW, sh2=bgH;
+            if (targetRatio > bgRatio) { sh2 = bgW / targetRatio; sy = (bgH - sh2) / 2; }
+            else { sw2 = bgH * targetRatio; sx = (bgW - sw2) / 2; }
+            ctx.drawImage(bgAsset.img, sx, sy, sw2, sh2, oInnerX, oInnerY, oInnerW, oInnerH);
+            const roomTints = {
+              boss: 'rgba(60,30,50,0.3)', meeting: 'rgba(30,40,60,0.25)',
+              pantry: 'rgba(40,50,30,0.25)', canteen: 'rgba(50,40,20,0.25)',
+              home: 'rgba(40,30,50,0.3)', desk: 'rgba(20,30,40,0.2)',
+            };
+            if (roomTints[loc.id]) { ctx.fillStyle = roomTints[loc.id]; ctx.fillRect(oInnerX, oInnerY, oInnerW, oInnerH); }
+          } else {
+            drawFloor(ctx, oInnerX, oInnerY, oInnerW, oInnerH, loc.color);
+          }
 
-          // 缩略图装饰精灵（静态变体，不循环）
+          // 缩略图装饰精灵
           if (assetsReady) {
             const seed = loc.id.charCodeAt(0) * 7 + loc.id.charCodeAt(loc.id.length-1) * 13;
-            const miniSize = Math.min(oInnerW * 0.12, 24);
-            if (loadedAssets.cats && (loc.id === 'pantry' || loc.id === 'home')) {
-              drawSpriteFrame(ctx, loadedAssets.cats, seed % 16, oInnerX + 4, oInnerY + oInnerH - miniSize - 2, miniSize, miniSize);
+            const oUnit = oInnerH / 12;
+            if ((loc.id === 'pantry' || loc.id === 'home') && loadedAssets.cats) {
+              const catS = oUnit * 1.2;
+              drawSpriteFrame(ctx, loadedAssets.cats, seed % 16, oInnerX + oUnit*0.3, oInnerY + oInnerH - catS - oUnit*0.2, catS, catS);
             }
             if (loadedAssets.plants) {
-              drawSpriteFrame(ctx, loadedAssets.plants, (seed + 3) % 16, oInnerX + oInnerW - miniSize - 3, oInnerY + oInnerH - miniSize - 2, miniSize, miniSize);
+              const plantS = oUnit * 1;
+              drawSpriteFrame(ctx, loadedAssets.plants, (seed+3)%16, oInnerX + oInnerW - plantS - oUnit*0.3, oInnerY + oInnerH - plantS - oUnit*0.2, plantS, plantS);
             }
-            // 咖啡机（茶水间，真动画）
             if (loc.id === 'pantry' && loadedAssets.coffee) {
+              const coffeeS = oUnit * 1.3;
               const cf2 = Math.floor(t/80) % 96;
-              const coffeeS = Math.min(oInnerW * 0.15, 28);
-              drawSpriteFrame(ctx, loadedAssets.coffee, cf2, oInnerX + oInnerW * 0.65, oInnerY + 4, coffeeS, coffeeS);
+              drawSpriteFrame(ctx, loadedAssets.coffee, cf2, oInnerX + oInnerW * 0.65, oInnerY + oUnit*0.3, coffeeS, coffeeS);
+            }
+            if (loc.id === 'desk' && loadedAssets.serverroom) {
+              const srvH2 = oUnit * 2.5;
+              const srvW2 = srvH2 * (180/251);
+              const srvFrame = Math.floor(t/166) % 40;
+              drawSpriteFrame(ctx, loadedAssets.serverroom, srvFrame, oInnerX + oInnerW - srvW2 - oUnit*0.3, oInnerY + oUnit*0.2, srvW2, srvH2);
             }
           }
 
@@ -1232,21 +1297,30 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
           }
           ctx.font='bold 10px monospace'; ctx.textAlign='center';
           ctx.fillText(String(present.length), rx+rw-bw-10, ry+bw+3); ctx.textAlign='left';
-          // NPCs
-          const sw=12*3, sh=18*3;
+          // NPCs — guest sprites
+          const oUnit2 = oInnerH / 12;
+          const oSprSize = Math.round(oUnit2 * 1.8);
           present.forEach((npc,ni)=>{
-            const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, sw, sh+14, t, loc.id, false);
+            const pos = getNpcPosition(npc.id, rx, ry, rw, rh, bw, labelH, oSprSize, oSprSize+14, t, loc.id, false);
             const nx = pos.x;
             const floatY=Math.sin(t/1200+ni*1.7+i*0.5)*0.5;
             const ny = pos.y + floatY;
             ctx.fillStyle='rgba(0,0,0,0.25)';
-            ctx.beginPath(); ctx.ellipse(nx+sw/2,ny+sh+1,sw*0.35,3,0,0,Math.PI*2); ctx.fill();
-            const spr=spriteCacheRef.current[npc.id]?.s;
-            if(spr) ctx.drawImage(spr,nx,ny);
-            if(npc.id===sel){ ctx.strokeStyle='#ffd700'; ctx.lineWidth=1.5; ctx.strokeRect(nx-2,ny-2,sw+4,sh+14); }
+            ctx.beginPath(); ctx.ellipse(nx+oSprSize/2,ny+oSprSize+1,oSprSize*0.3,2,0,0,Math.PI*2); ctx.fill();
+            const guestKey = NPC_GUEST_MAP_OV[npc.id];
+            const guestAsset = assetsReady && guestKey && loadedAssets[guestKey];
+            if (guestAsset && guestAsset.img && guestAsset.cols) {
+              const rowOff = (npc.id === 'xinyi') ? guestAsset.cols : 0;
+              const gFrame = rowOff + Math.floor(t / 250) % guestAsset.cols;
+              drawSpriteFrame(ctx, guestAsset, gFrame, nx, ny, oSprSize, oSprSize);
+            } else {
+              const spr=spriteCacheRef.current[npc.id]?.s;
+              if(spr) ctx.drawImage(spr,nx,ny);
+            }
+            if(npc.id===sel){ ctx.strokeStyle='#ffd700'; ctx.lineWidth=1.5; ctx.strokeRect(nx-2,ny-2,oSprSize+4,oSprSize+14); }
             ctx.fillStyle='#eee'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
-            ctx.fillText(npc.name, nx+sw/2, ny+sh+3); ctx.textAlign='left';
-            const mbw2=22, mbx2=nx+(sw-mbw2)/2, mby2=ny+sh+12;
+            ctx.fillText(npc.name, nx+oSprSize/2, ny+oSprSize+3); ctx.textAlign='left';
+            const mbw2=Math.min(20, oSprSize), mbx2=nx+(oSprSize-mbw2)/2, mby2=ny+oSprSize+10;
             ctx.fillStyle='#0e1119'; ctx.fillRect(mbx2,mby2,mbw2,3);
             ctx.fillStyle=moodColor(npc.state.moodValue);
             ctx.fillRect(mbx2,mby2,mbw2*npc.state.moodValue/100,3);
@@ -1290,24 +1364,22 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
   );
 }
 
-// ─── 对话流（主体区域）───
+// ─── 对话流（左栏）───
 function DialogueStream({ dialogues, npcs }) {
   const npcMap = {};
   for (const n of npcs) npcMap[n.id] = n;
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [dialogues.length]);
 
   if (dialogues.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-sm" style={{color:'#9ca3af', background:'#141c34'}}>
+      <div className="flex-1 flex items-center justify-center text-sm" style={{color:'#9ca3af'}}>
         <div className="text-center">
-          <div className="text-3xl mb-2">...</div>
-          <div>点击下方播放按钮，世界开始运转</div>
+          <div className="text-2xl mb-2" style={{opacity:0.5}}>💬</div>
+          <div style={{fontSize:11}}>点击 ▶ 开始，世界运转后对话会出现在这里</div>
         </div>
       </div>
     );
@@ -1315,14 +1387,15 @@ function DialogueStream({ dialogues, npcs }) {
 
   return (
     <div ref={scrollRef} className="dialogue-stream">
-      {[...dialogues].reverse().slice(0, 50).map((d, i) => {
+      {[...dialogues].reverse().slice(0, 80).map((d, i) => {
         const from = npcMap[d.from];
         const to = npcMap[d.to];
-        const isEvent = !from; // 事件类消息
+        const isEvent = !from;
+        const timeStr = `第${d.day}天 ${String(d.hour).padStart(2,'0')}:00`;
         if (isEvent) {
           return (
             <div key={i} className="dialogue-event animate-fade-in">
-              <span className="text-text-dim">[{d.day}d {d.hour}h]</span>
+              <span style={{color:'#ffd700', fontSize:10, flexShrink:0}}>{timeStr}</span>
               <span>{d.text || d.content}</span>
             </div>
           );
@@ -1330,19 +1403,13 @@ function DialogueStream({ dialogues, npcs }) {
         return (
           <div key={i} className={"dialogue-row animate-fade-in " + (i === 0 ? "dialogue-latest" : "")}>
             <div className="dialogue-meta">
-              <span className="dialogue-time">{d.day}d {d.hour}h</span>
+              <span className="dialogue-time">{timeStr}</span>
             </div>
             <div className="dialogue-body">
               <div className="dialogue-speakers">
-                <span className="dialogue-from">
-                  <PixelSprite npcId={d.from} size={2} />
-                  <span>{from?.name}</span>
-                </span>
-                <span className="dialogue-arrow">&#10132;</span>
-                <span className="dialogue-to">
-                  <PixelSprite npcId={d.to} size={2} />
-                  <span>{to?.name}</span>
-                </span>
+                <span className="dialogue-from">{from?.emoji} {from?.name}</span>
+                <span className="dialogue-arrow">→</span>
+                <span className="dialogue-to">{to?.emoji} {to?.name}</span>
               </div>
               <div className="dialogue-content" style={{whiteSpace:'pre-wrap'}}>"{d.content}"</div>
               {d.subtext && <div className="dialogue-subtext">{d.subtext}</div>}
@@ -1939,38 +2006,49 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
   );
 }
 
-// ─── 底部时间条 ───
+// ─── 底部时间条（线性时间轴）───
 function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, onSpeedChange }) {
   const hourLabel = SCHEDULE_TEMPLATE.find((s) => s.hour === gameTime.hour)?.label || "";
+  // 7:00 ~ 23:00 = 16小时
+  const progress = ((gameTime.hour - 7) / 16) * 100;
+  const hours = [7, 9, 12, 14, 18, 21, 23];
 
   return (
     <div className="time-bar">
-      <div className="flex items-center gap-3 flex-1">
-        <span className="text-sm font-bold" style={{color:'#ffd700'}}>
+      {/* 播放控制 */}
+      <button onClick={onTogglePlay}
+        className={"btn-pokemon " + (isPlaying ? "btn-pokemon-danger" : "btn-pokemon-primary")}
+        style={{fontSize:11, padding:'4px 14px', flexShrink:0}}>
+        {isPlaying ? "⏸" : "▶"}
+      </button>
+
+      {/* 时间信息 */}
+      <div style={{flexShrink:0, textAlign:'center', minWidth:90}}>
+        <div className="text-xs font-bold" style={{color:'#ffd700'}}>
           第{gameTime.day}天 {String(gameTime.hour).padStart(2, "0")}:00
-        </span>
-        <span className="text-xs" style={{color:'#9ca3af'}}>{hourLabel}</span>
-
-        {/* 时间进度条 - Pokemon HP bar style */}
-        <div className="flex-1 mx-2 poke-bar">
-          <div className="poke-bar-fill transition-all duration-300"
-            style={{ width: (((gameTime.hour - 7) / 16) * 100) + '%', background:'linear-gradient(90deg, #e94560, #ffd700)' }} />
         </div>
-
-        {isBusy && <span className="text-xs animate-pulse-glow" style={{color:'#ffd700'}}>⟳ 推演中...</span>}
+        <div style={{fontSize:9, color:'#9ca3af'}}>{hourLabel}</div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <button onClick={onAdvance} disabled={isBusy}
-          className="btn-pokemon btn-pokemon-primary"
-          style={{fontSize:11, padding:'4px 12px'}}>
-          ▶ 下一步
-        </button>
-        <button onClick={onTogglePlay}
-          className={"btn-pokemon " + (isPlaying ? "btn-pokemon-danger" : "btn-pokemon-secondary")}
-          style={{fontSize:11, padding:'4px 12px'}}>
-          {isPlaying ? "⏸ 暂停" : "⏩ 自动"}
-        </button>
+      {/* 时间线 */}
+      <div className="timeline-track">
+        <div className="timeline-fill" style={{ width: Math.max(1, progress) + '%' }} />
+        <div className="timeline-markers">
+          {hours.map(h => {
+            const pos = ((h - 7) / 16) * 100;
+            return (
+              <div key={h} style={{position:'absolute', left: pos + '%'}}>
+                <div className="timeline-marker" />
+                <div className="timeline-hour-label">{h}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 速度 + 状态 */}
+      <div className="flex items-center gap-2" style={{flexShrink:0}}>
+        {isBusy && <span className="animate-pulse-glow" style={{color:'#ffd700', fontSize:11}}>⟳</span>}
         <select value={speed} onChange={(e) => onSpeedChange(Number(e.target.value))}
           className="speed-select">
           <option value={1}>1x</option>
@@ -2080,60 +2158,52 @@ function SimulationScreen({ apiConfig, onSettings }) {
 
   return (
     <div className="simulation-layout">
-      {/* 左侧：地图 + 对话 */}
-      <div className="simulation-main">
-        {/* 顶栏 */}
-        <header className="sim-header">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-bold" style={{color:'#ffd700'}}>⭐ 像素办公室</span>
-            {error && <span style={{color:'#d85858', fontSize:12}}>{error}</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowIntervention(!showIntervention)}
-              className={"btn-pokemon " + (showIntervention ? "btn-pokemon-primary" : "btn-pokemon-secondary")}
-              style={{fontSize:11, padding:'4px 12px'}}>
-              🌩️ 天命干预
-            </button>
-            <button onClick={onSettings}
-              className="btn-pokemon btn-pokemon-secondary"
-              style={{fontSize:11, padding:'4px 10px'}}>
-              ⚙️
-            </button>
-          </div>
-        </header>
-
-        {/* 干预面板 */}
-        {showIntervention && (
-          <div className="intervention-bar">
-            {world.interventions.map((iv) => (
-              <button key={iv.id}
-                onClick={() => setIntervention(intervention === iv.id ? null : iv.id)}
-                title={iv.description}
-                className={"btn-pokemon " + (intervention === iv.id ? "btn-pokemon-primary" : "btn-pokemon-secondary")}
-                style={{fontSize:11, padding:'3px 10px'}}>
-                {iv.emoji} {iv.name}
-              </button>
-            ))}
-            {intervention && <span className="text-xs ml-2" style={{color:'#ffd700'}}>⚡ 下次推演时生效</span>}
-          </div>
-        )}
-
-        {/* Canvas 地图 */}
-        <CanvasMap locations={world.locations} npcs={npcs} selectedNPC={selectedNPC} onSelectNPC={setSelectedNPC} />
-
-        {/* 众生之声（主体区域） */}
-        <div className="dialogue-container">
-          <div className="dialogue-header">
-            <span>&#128172; 众生之声</span>
-            <span className="text-text-dim text-xs">{dialogues.length} 条记录</span>
-          </div>
-          <DialogueStream dialogues={dialogues} npcs={npcs} />
+      {/* ── 顶栏（横跨三栏）── */}
+      <header className="sim-header">
+        <div className="flex items-center gap-3">
+          <span className="font-bold" style={{color:'#ffd700', fontSize:14}}>⭐ 像素办公室</span>
+          {error && <span style={{color:'#e94560', fontSize:11}}>{error}</span>}
         </div>
+        <div className="flex items-center gap-2">
+          {showIntervention && world.interventions.map((iv) => (
+            <button key={iv.id}
+              onClick={() => setIntervention(intervention === iv.id ? null : iv.id)}
+              title={iv.description}
+              className={"btn-pokemon " + (intervention === iv.id ? "btn-pokemon-primary" : "btn-pokemon-secondary")}
+              style={{fontSize:10, padding:'2px 8px'}}>
+              {iv.emoji} {iv.name}
+            </button>
+          ))}
+          {intervention && <span style={{color:'#ffd700', fontSize:10}}>⚡ 生效中</span>}
+          <button onClick={() => setShowIntervention(!showIntervention)}
+            className={"btn-pokemon " + (showIntervention ? "btn-pokemon-primary" : "btn-pokemon-secondary")}
+            style={{fontSize:10, padding:'2px 8px'}}>
+            🌩️
+          </button>
+          <button onClick={onSettings}
+            className="btn-pokemon btn-pokemon-secondary"
+            style={{fontSize:10, padding:'2px 8px'}}>
+            ⚙️
+          </button>
+        </div>
+      </header>
+
+      {/* ── 左栏：众生之声 ── */}
+      <div className="dialogue-column">
+        <div className="dialogue-header">
+          <span>💬 众生之声</span>
+          <span style={{color:'#9ca3af', fontSize:10}}>{dialogues.length}</span>
+        </div>
+        <DialogueStream dialogues={dialogues} npcs={npcs} />
       </div>
 
-      {/* 右侧面板 - Pokemon style */}
+      {/* ── 中栏：世界预览 Canvas ── */}
+      <div className="canvas-column">
+        <CanvasMap locations={world.locations} npcs={npcs} selectedNPC={selectedNPC} onSelectNPC={setSelectedNPC} />
+      </div>
+
+      {/* ── 右栏：世界总览/NPC面板 ── */}
       <aside className="simulation-panel">
-        {/* Panel header - Pokemon gradient bar */}
         <div className="panel-header-pokemon">
           <span>{selectedNpcData ? (selectedNpcData.emoji + " " + selectedNpcData.name) : "🏢 世界总览"}</span>
           {selectedNpcData && (
@@ -2143,15 +2213,13 @@ function SimulationScreen({ apiConfig, onSettings }) {
             </button>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className="flex-1 overflow-y-auto p-3" style={{minHeight:0}}>
           {selectedNpcData ? (
             <NPCPanel npc={selectedNpcData} allNpcs={npcs} apiConfig={apiConfig} world={world} gameTime={gameTime} />
           ) : (
             <WorldDashboard world={world} npcs={npcs} events={events} tensions={tensions} gameTime={gameTime} />
           )}
         </div>
-
-        {/* NPC快速选择栏 - Pokemon style */}
         <div className="npc-selector-bar">
           <button onClick={() => setSelectedNPC(null)}
             className={"npc-selector-btn " + (!selectedNPC ? "active" : "")}>
@@ -2167,7 +2235,7 @@ function SimulationScreen({ apiConfig, onSettings }) {
         </div>
       </aside>
 
-      {/* 底部时间条 */}
+      {/* ── 底部时间条 ── */}
       <TimeBar gameTime={gameTime} isPlaying={isPlaying} isBusy={isBusy}
         onAdvance={advanceTick} onTogglePlay={() => setIsPlaying(!isPlaying)}
         speed={speed} onSpeedChange={setSpeed} />
