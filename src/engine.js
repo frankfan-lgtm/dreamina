@@ -258,10 +258,34 @@ export async function callAPI(apiConfig, systemPrompt, userPrompt) {
  */
 export function parseResponse(text) {
   let cleaned = text.trim();
+  // 去掉 markdown 代码块包裹
   if (cleaned.startsWith("```")) {
     cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
   }
-  return JSON.parse(cleaned);
+  // 如果整体不以 { 开头，尝试提取第一个 JSON 对象
+  if (!cleaned.startsWith("{")) {
+    const start = cleaned.indexOf("{");
+    if (start >= 0) cleaned = cleaned.slice(start);
+  }
+  // 如果不以 } 结尾，尝试截断到最后一个 }
+  if (!cleaned.endsWith("}")) {
+    const end = cleaned.lastIndexOf("}");
+    if (end >= 0) cleaned = cleaned.slice(0, end + 1);
+  }
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // 尝试修复常见问题：多余逗号（trailing commas）
+    const fixed = cleaned
+      .replace(/,\s*([}\]])/g, "$1")           // 去掉尾逗号
+      .replace(/(['"])?(\w+)(['"])?\s*:/g, '"$2":') // 补全属性名引号
+      .replace(/:\s*'([^']*)'/g, ': "$1"');     // 单引号值转双引号
+    try {
+      return JSON.parse(fixed);
+    } catch {
+      throw new Error("AI返回的JSON无法解析: " + e.message + "\n原文前200字: " + cleaned.slice(0, 200));
+    }
+  }
 }
 
 /**
