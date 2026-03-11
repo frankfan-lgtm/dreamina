@@ -1433,8 +1433,7 @@ function NarrativeStream({ dialogues, npcs, isBusy }) {
         </div>
       )}
       {[...grouped].reverse().slice(0, 30).map((group, gi) => {
-        const endHour = Math.min(group.hour + 3, 24);
-        const timeStr = `第${group.day}天 · ${String(group.hour).padStart(2,'0')}:00-${String(endHour).padStart(2,'0')}:00`;
+        const timeStr = `第${group.day}天 · ${String(group.hour).padStart(2,'0')}:00`;
         return (
           <div key={group.key} className={"narrative-chapter animate-fade-in " + (gi === 0 ? "narrative-latest" : "")}>
             <div className="narrative-chapter-header">
@@ -2067,10 +2066,14 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
 
 // ─── 底部时间条（线性时间轴）───
 function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, onSpeedChange, schedule }) {
-  const hourLabel = (schedule || SCHEDULE_TEMPLATE).find((s) => s.hour === gameTime.hour)?.label || "";
-  // 7:00 ~ 22:00 = 15小时 (3h ticks: 7,10,13,16,19,22)
-  const progress = ((gameTime.hour - 7) / 15) * 100;
-  const hours = [7, 10, 13, 16, 19, 22];
+  const sched = schedule || SCHEDULE_TEMPLATE;
+  const hourLabel = sched.find((s) => s.hour === gameTime.hour)?.label || "";
+  // 从日程表动态计算进度和刻度
+  const hours = sched.map(s => s.hour).sort((a, b) => a - b);
+  const minH = hours[0] || 7;
+  const maxH = hours[hours.length - 1] || 22;
+  const range = Math.max(1, maxH - minH);
+  const progress = ((gameTime.hour - minH) / range) * 100;
 
   return (
     <div className="time-bar">
@@ -2094,7 +2097,7 @@ function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, 
         <div className="timeline-fill" style={{ width: Math.max(1, progress) + '%' }} />
         <div className="timeline-markers">
           {hours.map(h => {
-            const pos = ((h - 7) / 16) * 100;
+            const pos = ((h - minH) / range) * 100;
             return (
               <div key={h} style={{position:'absolute', left: pos + '%'}}>
                 <div className="timeline-marker" />
@@ -2137,7 +2140,8 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
   }, []);
 
   const [npcs, setNpcs] = useState(() => savedState?.npcs || initNpcs(wp.npcs, wp.relationships));
-  const [gameTime, setGameTime] = useState(() => savedState?.gameTime || { day: 1, hour: 7 });
+  const firstHour = (wp.schedule || SCHEDULE_TEMPLATE)[0]?.hour || 7;
+  const [gameTime, setGameTime] = useState(() => savedState?.gameTime || { day: 1, hour: firstHour });
   const [events, setEvents] = useState(() => savedState?.events || []);
   const [dialogues, setDialogues] = useState(() => savedState?.dialogues || []);
   const [tensions, setTensions] = useState(() => savedState?.tensions || []);
@@ -2155,7 +2159,7 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
 
   // 自动存档到localStorage（每次tick结束后）
   useEffect(() => {
-    if (gameTime.day === 1 && gameTime.hour === 7 && dialogues.length === 0) return; // 未开始不存
+    if (gameTime.day === 1 && gameTime.hour === firstHour && dialogues.length === 0) return; // 未开始不存
     try {
       const saveData = {
         worldId: wp.id,
@@ -2215,13 +2219,13 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
   const handleClearSave = useCallback(() => {
     localStorage.removeItem(WORLD_SAVE_KEY);
     setNpcs(initNpcs(wp.npcs, wp.relationships));
-    setGameTime({ day: 1, hour: 7 });
+    setGameTime({ day: 1, hour: firstHour });
     setEvents([]);
     setDialogues([]);
     setTensions([]);
     setError(null);
     setShowSaveMenu(false);
-  }, [wp]);
+  }, [wp, firstHour]);
 
   const advanceTick = useCallback(async () => {
     if (isBusy) return;
@@ -2292,15 +2296,16 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
 
       setIntervention(null);
 
-      // 推进时间（3小时为一个tick）
+      // 推进时间 — 根据日程表跳到下一个时段
       setGameTime((prev) => {
-        let nextHour = prev.hour + 3;
-        let nextDay = prev.day;
-        if (nextHour > 23) {
-          nextHour = 7;
-          nextDay += 1;
+        const sched = wp.schedule || SCHEDULE_TEMPLATE;
+        const hours = sched.map(s => s.hour).sort((a, b) => a - b);
+        const currentIdx = hours.indexOf(prev.hour);
+        if (currentIdx >= 0 && currentIdx < hours.length - 1) {
+          return { day: prev.day, hour: hours[currentIdx + 1] };
         }
-        return { day: nextDay, hour: nextHour };
+        // 当天最后一个时段 → 新的一天
+        return { day: prev.day + 1, hour: hours[0] };
       });
     } catch (e) {
       setError(e.message);

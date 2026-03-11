@@ -81,11 +81,12 @@ const FEW_SHOT_EXAMPLE = `
     }
   },
   "schedule": [
-    { "hour": 7, "label": "起床通勤", "defaultLocation": "home" },
-    { "hour": 9, "label": "晨会", "defaultLocation": "meeting" },
-    { "hour": 12, "label": "午饭", "defaultLocation": "canteen" },
-    { "hour": 18, "label": "纠结下班", "defaultLocation": "desk" },
-    { "hour": 23, "label": "睡觉", "defaultLocation": "home" }
+    { "hour": 7, "label": "起床通勤 → 到公司", "defaultLocation": "home" },
+    { "hour": 10, "label": "晨会 → 核心工作", "defaultLocation": "desk" },
+    { "hour": 13, "label": "午饭 → 下午工作", "defaultLocation": "canteen" },
+    { "hour": 16, "label": "方案评审 → 冲刺", "defaultLocation": "desk" },
+    { "hour": 19, "label": "加班 → 纠结下班", "defaultLocation": "desk" },
+    { "hour": 22, "label": "回家 → 休息", "defaultLocation": "home" }
   ]
 }`;
 
@@ -99,7 +100,7 @@ const GENERATOR_SYSTEM_PROMPT = `你是一个「世界构建师」。用户会�
 5. **马斯洛目标驱动行动** — 每个NPC有生存/安全/社交/地位/自我实现五层目标，优先级因人而异
 
 ## 输出要求
-生成 5-7 个NPC，6个地点，3-5个有限资源，4-6个干预事件，5-6条世界规则，以及完整的日程表（17个时段，从7:00到23:00）。
+生成 5-7 个NPC，6个地点，3-5个有限资源，4-6个干预事件，5-6条世界规则，以及完整的日程表（6个时段，每3小时一个tick：7→10→13→16→19→22）。
 
 ## NPC 设计要求
 - 每个NPC必须有独特的 id（英文小写，简短）、name、title、age、emoji、gender（male/female）、region（初始位置）
@@ -119,8 +120,9 @@ const GENERATOR_SYSTEM_PROMPT = `你是一个「世界构建师」。用户会�
 - 要有矛盾和张力——不要所有关系都是正面的
 
 ## 日程表要求
-- 17个时段（hour 7-23），每个有 label（当前活动描述）和 defaultLocation（默认地点id）
+- 6个时段（每3小时一个tick：hour 7, 10, 13, 16, 19, 22），每个有 label（这3小时的活动概要）和 defaultLocation（默认地点id）
 - 要符合世界观设定——比如学校世界有上课时间，职场有工作时间
+- label 用 "A → B" 格式概括这3个小时的活动流
 
 ## 参考示例（精简版）
 ${FEW_SHOT_EXAMPLE}

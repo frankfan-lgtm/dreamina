@@ -40,23 +40,12 @@ export const HOGWARTS_CONFIG = {
 };
 
 export const HOGWARTS_SCHEDULE = [
-  { hour: 7, label: "起床", defaultLocation: "tower" },
-  { hour: 8, label: "早餐", defaultLocation: "great_hall" },
-  { hour: 9, label: "第一节课", defaultLocation: "dungeon" },
-  { hour: 10, label: "课间", defaultLocation: "grounds" },
-  { hour: 11, label: "第二节课", defaultLocation: "library" },
-  { hour: 12, label: "午餐", defaultLocation: "great_hall" },
-  { hour: 13, label: "自习/闲逛", defaultLocation: "library" },
-  { hour: 14, label: "下午课程", defaultLocation: "dungeon" },
-  { hour: 15, label: "魁地奇/社团", defaultLocation: "grounds" },
-  { hour: 16, label: "自由时间", defaultLocation: "grounds" },
-  { hour: 17, label: "晚餐", defaultLocation: "great_hall" },
-  { hour: 18, label: "自习/巡逻", defaultLocation: "library" },
-  { hour: 19, label: "秘密活动", defaultLocation: "room_of_req" },
-  { hour: 20, label: "宵禁前", defaultLocation: "tower" },
-  { hour: 21, label: "宵禁", defaultLocation: "tower" },
-  { hour: 22, label: "夜游/就寝", defaultLocation: "tower" },
-  { hour: 23, label: "深夜", defaultLocation: "tower" },
+  { hour: 7, label: "起床 → 早餐", defaultLocation: "great_hall" },
+  { hour: 10, label: "课程 → 课间", defaultLocation: "dungeon" },
+  { hour: 13, label: "午餐 → 自习", defaultLocation: "library" },
+  { hour: 16, label: "魁地奇/社团 → 晚餐", defaultLocation: "grounds" },
+  { hour: 19, label: "秘密活动 → 宵禁前", defaultLocation: "room_of_req" },
+  { hour: 22, label: "宵禁 → 深夜", defaultLocation: "tower" },
 ];
 
 export const HOGWARTS_NPCS = [

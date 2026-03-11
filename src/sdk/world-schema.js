@@ -96,8 +96,8 @@ export function validateWorld(worldPack) {
   }
 
   // schedule
-  if (!schedule || schedule.length < 5) {
-    errors.push("日程模板至少需要5个时段");
+  if (!schedule || schedule.length < 4) {
+    errors.push("日程模板至少需要4个时段（3小时为一个tick）");
   }
 
   return errors.length > 0 ? { valid: false, errors } : { valid: true };
@@ -136,24 +136,15 @@ export function normalizeWorld(worldPack) {
 function generateDefaultSchedule(locations) {
   const locIds = locations.map(l => l.id);
   const main = locIds[0] || "loc1";
+  const secondary = locIds[Math.min(1, locIds.length - 1)];
+  const social = locIds[Math.min(2, locIds.length - 1)];
   const rest = locIds[locIds.length - 1] || "loc6";
   return [
-    { hour: 7, label: "起床", defaultLocation: rest },
-    { hour: 8, label: "早间", defaultLocation: main },
-    { hour: 9, label: "上午", defaultLocation: main },
-    { hour: 10, label: "上午", defaultLocation: main },
-    { hour: 11, label: "上午", defaultLocation: main },
-    { hour: 12, label: "午间", defaultLocation: locIds[Math.min(4, locIds.length - 1)] },
-    { hour: 13, label: "午后", defaultLocation: main },
-    { hour: 14, label: "下午", defaultLocation: main },
-    { hour: 15, label: "下午", defaultLocation: locIds[Math.min(1, locIds.length - 1)] },
-    { hour: 16, label: "下午", defaultLocation: main },
-    { hour: 17, label: "傍晚", defaultLocation: main },
-    { hour: 18, label: "晚间", defaultLocation: main },
-    { hour: 19, label: "夜晚", defaultLocation: rest },
-    { hour: 20, label: "夜晚", defaultLocation: rest },
-    { hour: 21, label: "深夜", defaultLocation: rest },
-    { hour: 22, label: "深夜", defaultLocation: rest },
-    { hour: 23, label: "午夜", defaultLocation: rest },
+    { hour: 7, label: "起床 → 早间", defaultLocation: rest },
+    { hour: 10, label: "上午核心", defaultLocation: main },
+    { hour: 13, label: "午间 → 下午", defaultLocation: social },
+    { hour: 16, label: "下午 → 傍晚", defaultLocation: secondary },
+    { hour: 19, label: "夜晚活动", defaultLocation: main },
+    { hour: 22, label: "深夜 → 休息", defaultLocation: rest },
   ];
 }
