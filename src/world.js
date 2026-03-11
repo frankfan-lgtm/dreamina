@@ -40,25 +40,14 @@ export const WORLD_CONFIG = {
   ],
 };
 
-// ─── 日程模板 ───
+// ─── 日程模板（3小时为一个tick）───
 export const SCHEDULE_TEMPLATE = [
-  { hour: 7, label: "起床通勤", defaultLocation: "home" },
-  { hour: 8, label: "到公司", defaultLocation: "desk" },
-  { hour: 9, label: "晨会", defaultLocation: "meeting" },
-  { hour: 10, label: "核心工作", defaultLocation: "desk" },
-  { hour: 11, label: "工作", defaultLocation: "desk" },
-  { hour: 12, label: "午饭", defaultLocation: "canteen" },
-  { hour: 13, label: "午休/摸鱼", defaultLocation: "desk" },
-  { hour: 14, label: "下午工作", defaultLocation: "desk" },
-  { hour: 15, label: "方案评审", defaultLocation: "meeting" },
-  { hour: 16, label: "工作", defaultLocation: "desk" },
-  { hour: 17, label: "工作", defaultLocation: "desk" },
-  { hour: 18, label: "纠结下班", defaultLocation: "desk" },
-  { hour: 19, label: "加班/下班", defaultLocation: "desk" },
-  { hour: 20, label: "加班/回家", defaultLocation: "home" },
-  { hour: 21, label: "个人时间", defaultLocation: "home" },
-  { hour: 22, label: "休息", defaultLocation: "home" },
-  { hour: 23, label: "睡觉", defaultLocation: "home" },
+  { hour: 7, label: "起床通勤 → 到公司", defaultLocation: "home" },
+  { hour: 10, label: "晨会 → 核心工作", defaultLocation: "desk" },
+  { hour: 13, label: "午饭 → 下午工作", defaultLocation: "desk" },
+  { hour: 16, label: "方案评审 → 冲刺", defaultLocation: "desk" },
+  { hour: 19, label: "加班 → 纠结下班", defaultLocation: "desk" },
+  { hour: 22, label: "回家 → 休息", defaultLocation: "home" },
 ];
 
 // ─── 7个NPC完整定义 ───

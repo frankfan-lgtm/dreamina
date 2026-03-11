@@ -135,6 +135,7 @@ function PixelSprite({ npcId, size = 4 }) {
 }
 
 const STORAGE_KEY = "dreamina_api_config";
+const WORLD_SAVE_KEY = "dreamina_world_save";
 
 // ─── 初始化NPC状态 ───
 function initNpcs(npcData, relationshipData) {
@@ -1388,8 +1389,8 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
   );
 }
 
-// ─── 对话流（左栏）───
-function DialogueStream({ dialogues, npcs }) {
+// ─── 叙事流（左栏 — 旁白+对话交替）───
+function NarrativeStream({ dialogues, npcs, isBusy }) {
   const npcMap = {};
   for (const n of npcs) npcMap[n.id] = n;
   const scrollRef = useRef(null);
@@ -1402,42 +1403,76 @@ function DialogueStream({ dialogues, npcs }) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm" style={{color:'#9ca3af'}}>
         <div className="text-center">
-          <div className="text-2xl mb-2" style={{opacity:0.5}}>💬</div>
-          <div style={{fontSize:11}}>点击 ▶ 开始，世界运转后对话会出现在这里</div>
+          <div className="text-2xl mb-2" style={{opacity:0.5}}>📖</div>
+          <div style={{fontSize:12}}>点击 ▶ 开始，故事将在这里展开</div>
         </div>
       </div>
     );
   }
 
+  // 按时间段分组
+  const grouped = [];
+  let currentGroup = null;
+  for (const d of dialogues) {
+    const key = `${d.day}-${d.hour}`;
+    if (!currentGroup || currentGroup.key !== key) {
+      currentGroup = { key, day: d.day, hour: d.hour, items: [] };
+      grouped.push(currentGroup);
+    }
+    currentGroup.items.push(d);
+  }
+
   return (
-    <div ref={scrollRef} className="dialogue-stream">
-      {[...dialogues].reverse().slice(0, 80).map((d, i) => {
-        const from = npcMap[d.from];
-        const to = npcMap[d.to];
-        const isEvent = !from;
-        const timeStr = `第${d.day}天 ${String(d.hour).padStart(2,'0')}:00`;
-        if (isEvent) {
-          return (
-            <div key={i} className="dialogue-event animate-fade-in">
-              <span style={{color:'#ffd700', fontSize:10, flexShrink:0}}>{timeStr}</span>
-              <span>{d.text || d.content}</span>
-            </div>
-          );
-        }
+    <div ref={scrollRef} className="narrative-stream">
+      {isBusy && (
+        <div className="narrative-loading animate-fade-in">
+          <div className="narrative-loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span>世界正在演进中...</span>
+        </div>
+      )}
+      {[...grouped].reverse().slice(0, 30).map((group, gi) => {
+        const endHour = Math.min(group.hour + 3, 24);
+        const timeStr = `第${group.day}天 · ${String(group.hour).padStart(2,'0')}:00-${String(endHour).padStart(2,'0')}:00`;
         return (
-          <div key={i} className={"dialogue-row animate-fade-in " + (i === 0 ? "dialogue-latest" : "")}>
-            <div className="dialogue-meta">
-              <span className="dialogue-time">{timeStr}</span>
+          <div key={group.key} className={"narrative-chapter animate-fade-in " + (gi === 0 ? "narrative-latest" : "")}>
+            <div className="narrative-chapter-header">
+              <div className="narrative-chapter-line"></div>
+              <span className="narrative-chapter-time">{timeStr}</span>
+              <div className="narrative-chapter-line"></div>
             </div>
-            <div className="dialogue-body">
-              <div className="dialogue-speakers">
-                <span className="dialogue-from">{from?.emoji} {from?.name}</span>
-                <span className="dialogue-arrow">→</span>
-                <span className="dialogue-to">{to?.emoji} {to?.name}</span>
-              </div>
-              <div className="dialogue-content" style={{whiteSpace:'pre-wrap'}}>"{d.content}"</div>
-              {d.subtext && <div className="dialogue-subtext">{d.subtext}</div>}
-            </div>
+            {group.items.map((d, i) => {
+              if (d.type === 'narration') {
+                return (
+                  <div key={i} className="narrative-narration">
+                    <div className="narrative-narration-text">{d.content}</div>
+                  </div>
+                );
+              }
+              // dialogue (type === 'dialogue' or legacy format)
+              const from = npcMap[d.from];
+              const to = npcMap[d.to];
+              if (!from) {
+                // event fallback
+                return (
+                  <div key={i} className="narrative-event">
+                    <span>{d.text || d.content}</span>
+                  </div>
+                );
+              }
+              return (
+                <div key={i} className="narrative-dialogue">
+                  <div className="narrative-dialogue-header">
+                    <span className="narrative-dialogue-from">{from?.emoji} {from?.name}</span>
+                    <span className="narrative-dialogue-arrow">→</span>
+                    <span className="narrative-dialogue-to">{to?.emoji} {to?.name}</span>
+                  </div>
+                  <div className="narrative-dialogue-content">"{d.content}"</div>
+                  {d.subtext && <div className="narrative-dialogue-subtext">┗ {d.subtext}</div>}
+                </div>
+              );
+            })}
           </div>
         );
       })}
@@ -2033,9 +2068,9 @@ function ChatTab({ npc, allNpcs, apiConfig, world, gameTime }) {
 // ─── 底部时间条（线性时间轴）───
 function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, onSpeedChange, schedule }) {
   const hourLabel = (schedule || SCHEDULE_TEMPLATE).find((s) => s.hour === gameTime.hour)?.label || "";
-  // 7:00 ~ 23:00 = 16小时
-  const progress = ((gameTime.hour - 7) / 16) * 100;
-  const hours = [7, 9, 12, 14, 18, 21, 23];
+  // 7:00 ~ 22:00 = 15小时 (3h ticks: 7,10,13,16,19,22)
+  const progress = ((gameTime.hour - 7) / 15) * 100;
+  const hours = [7, 10, 13, 16, 19, 22];
 
   return (
     <div className="time-bar">
@@ -2088,11 +2123,24 @@ function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, 
 // ─── 主模拟界面 ───
 function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
   const wp = worldPack || WORLD_PRESETS.office;
-  const [npcs, setNpcs] = useState(() => initNpcs(wp.npcs, wp.relationships));
-  const [gameTime, setGameTime] = useState({ day: 1, hour: 9 });
-  const [events, setEvents] = useState([]);
-  const [dialogues, setDialogues] = useState([]);
-  const [tensions, setTensions] = useState([]);
+
+  // 尝试从localStorage恢复存档
+  const savedState = React.useMemo(() => {
+    try {
+      const raw = localStorage.getItem(WORLD_SAVE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.worldId === wp.id) return parsed;
+      }
+    } catch {}
+    return null;
+  }, []);
+
+  const [npcs, setNpcs] = useState(() => savedState?.npcs || initNpcs(wp.npcs, wp.relationships));
+  const [gameTime, setGameTime] = useState(() => savedState?.gameTime || { day: 1, hour: 7 });
+  const [events, setEvents] = useState(() => savedState?.events || []);
+  const [dialogues, setDialogues] = useState(() => savedState?.dialogues || []);
+  const [tensions, setTensions] = useState(() => savedState?.tensions || []);
   const [selectedNPC, setSelectedNPC] = useState(null);
   const [intervention, setIntervention] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -2100,9 +2148,80 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
   const [speed, setSpeed] = useState(1);
   const [error, setError] = useState(null);
   const [showIntervention, setShowIntervention] = useState(false);
+  const [showSaveMenu, setShowSaveMenu] = useState(false);
   const playRef = useRef(false);
 
   const world = wp.config;
+
+  // 自动存档到localStorage（每次tick结束后）
+  useEffect(() => {
+    if (gameTime.day === 1 && gameTime.hour === 7 && dialogues.length === 0) return; // 未开始不存
+    try {
+      const saveData = {
+        worldId: wp.id,
+        npcs,
+        gameTime,
+        events,
+        dialogues: dialogues.slice(-200), // 限制存储量
+        tensions,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(WORLD_SAVE_KEY, JSON.stringify(saveData));
+    } catch {}
+  }, [gameTime, npcs, events, dialogues, tensions]);
+
+  // 手动导出JSON
+  const handleExportSave = useCallback(() => {
+    const saveData = { worldId: wp.id, worldName: world.name, npcs, gameTime, events, dialogues, tensions, savedAt: Date.now() };
+    const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dreamina-${world.name}-D${gameTime.day}H${gameTime.hour}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setShowSaveMenu(false);
+  }, [wp.id, world.name, npcs, gameTime, events, dialogues, tensions]);
+
+  // 手动导入JSON
+  const handleImportSave = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.npcs) setNpcs(data.npcs);
+          if (data.gameTime) setGameTime(data.gameTime);
+          if (data.events) setEvents(data.events);
+          if (data.dialogues) setDialogues(data.dialogues);
+          if (data.tensions) setTensions(data.tensions);
+          setError(null);
+        } catch (err) {
+          setError('存档文件格式错误: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+    setShowSaveMenu(false);
+  }, []);
+
+  // 清除存档
+  const handleClearSave = useCallback(() => {
+    localStorage.removeItem(WORLD_SAVE_KEY);
+    setNpcs(initNpcs(wp.npcs, wp.relationships));
+    setGameTime({ day: 1, hour: 7 });
+    setEvents([]);
+    setDialogues([]);
+    setTensions([]);
+    setError(null);
+    setShowSaveMenu(false);
+  }, [wp]);
 
   const advanceTick = useCallback(async () => {
     if (isBusy) return;
@@ -2123,13 +2242,37 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
         setEvents((prev) => [...prev, { day: gameTime.day, hour: gameTime.hour, text: result.sum }]);
       }
 
-      if (result.talks && Array.isArray(result.talks)) {
-        const newDialogues = result.talks.map((t) => ({
-          day: gameTime.day, hour: gameTime.hour,
-          from: t.f, to: t.t, content: t.s, subtext: t.subtext || "",
-        }));
-        setDialogues((prev) => [...prev, ...newDialogues]);
+      // 构建统一叙事流：旁白和对话交替
+      const newNarrativeItems = [];
+
+      // 收集旁白
+      const narrations = (result.narrations && Array.isArray(result.narrations)) ? result.narrations : [];
+      // 收集对话
+      const talks = (result.talks && Array.isArray(result.talks)) ? result.talks : [];
+
+      // 交替排列：旁白1 → 对话1,2 → 旁白2 → 对话3,4 → 旁白3 → 对话5,6
+      let ni = 0, ti = 0;
+      while (ni < narrations.length || ti < talks.length) {
+        if (ni < narrations.length) {
+          newNarrativeItems.push({
+            type: 'narration',
+            day: gameTime.day, hour: gameTime.hour,
+            content: narrations[ni],
+          });
+          ni++;
+        }
+        // 每段旁白后跟2段对话
+        for (let k = 0; k < 2 && ti < talks.length; k++, ti++) {
+          const t = talks[ti];
+          newNarrativeItems.push({
+            type: 'dialogue',
+            day: gameTime.day, hour: gameTime.hour,
+            from: t.f, to: t.t, content: t.s, subtext: t.subtext || "",
+          });
+        }
       }
+
+      setDialogues((prev) => [...prev, ...newNarrativeItems]);
 
       if (result.tensions && Array.isArray(result.tensions)) {
         setTensions(result.tensions);
@@ -2149,9 +2292,9 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
 
       setIntervention(null);
 
-      // 推进时间
+      // 推进时间（3小时为一个tick）
       setGameTime((prev) => {
-        let nextHour = prev.hour + 1;
+        let nextHour = prev.hour + 3;
         let nextDay = prev.day;
         if (nextHour > 23) {
           nextHour = 7;
@@ -2193,6 +2336,9 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
           )}
           <span className="font-bold" style={{color:'#ffd700', fontSize:14}}>{wp.emoji || "⭐"} {world.name}</span>
           {error && <span style={{color:'#e94560', fontSize:11}}>{error}</span>}
+          {savedState && dialogues.length > 0 && gameTime.day === savedState.gameTime?.day && gameTime.hour === savedState.gameTime?.hour && (
+            <span style={{color:'#58c878', fontSize:10, opacity:0.7}}>已恢复存档</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {showIntervention && world.interventions.map((iv) => (
@@ -2210,6 +2356,36 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
             style={{fontSize:10, padding:'2px 8px'}}>
             🌩️
           </button>
+          <div style={{position:'relative'}}>
+            <button onClick={() => setShowSaveMenu(!showSaveMenu)}
+              className={"btn-pokemon " + (showSaveMenu ? "btn-pokemon-primary" : "btn-pokemon-secondary")}
+              style={{fontSize:10, padding:'2px 8px'}}>
+              💾
+            </button>
+            {showSaveMenu && (
+              <div style={{
+                position:'absolute', top:'100%', right:0, marginTop:4, zIndex:100,
+                background:'#141722', border:'2px solid #2a2a45', borderRadius:6,
+                padding:4, minWidth:120, boxShadow:'0 4px 12px rgba(0,0,0,0.5)',
+              }}>
+                <button onClick={handleExportSave}
+                  className="btn-pokemon btn-pokemon-secondary"
+                  style={{fontSize:10, padding:'4px 10px', width:'100%', marginBottom:2, textAlign:'left'}}>
+                  📤 导出存档
+                </button>
+                <button onClick={handleImportSave}
+                  className="btn-pokemon btn-pokemon-secondary"
+                  style={{fontSize:10, padding:'4px 10px', width:'100%', marginBottom:2, textAlign:'left'}}>
+                  📥 导入存档
+                </button>
+                <button onClick={handleClearSave}
+                  className="btn-pokemon btn-pokemon-secondary"
+                  style={{fontSize:10, padding:'4px 10px', width:'100%', textAlign:'left', color:'#e94560'}}>
+                  🗑️ 重置世界
+                </button>
+              </div>
+            )}
+          </div>
           <button onClick={onSettings}
             className="btn-pokemon btn-pokemon-secondary"
             style={{fontSize:10, padding:'2px 8px'}}>
@@ -2218,13 +2394,13 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
         </div>
       </header>
 
-      {/* ── 左栏：众生之声 ── */}
+      {/* ── 左栏：叙事流 ── */}
       <div className="dialogue-column">
         <div className="dialogue-header">
-          <span>💬 众生之声</span>
+          <span>📖 叙事流</span>
           <span style={{color:'#9ca3af', fontSize:10}}>{dialogues.length}</span>
         </div>
-        <DialogueStream dialogues={dialogues} npcs={npcs} />
+        <NarrativeStream dialogues={dialogues} npcs={npcs} isBusy={isBusy} />
       </div>
 
       {/* ── 中栏：世界预览 Canvas ── */}
