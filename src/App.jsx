@@ -1402,14 +1402,14 @@ function NarrativeStream({ dialogues, npcs, isBusy, sceneImages }) {
     if (dialogues.length > prevLenRef.current) {
       const newItems = dialogues.length - prevLenRef.current;
       prevLenRef.current = dialogues.length;
-      // 逐段揭示：每段间隔 400ms
+      // 逐段揭示：每段间隔 250ms
       let revealed = 0;
       setRevealCount(dialogues.length - newItems); // 先只显示旧内容
       const timer = setInterval(() => {
         revealed++;
         setRevealCount(dialogues.length - newItems + revealed);
         if (revealed >= newItems) clearInterval(timer);
-      }, 400);
+      }, 250);
       return () => clearInterval(timer);
     } else {
       prevLenRef.current = dialogues.length;
@@ -2178,6 +2178,7 @@ function TimeBar({ gameTime, isPlaying, isBusy, onAdvance, onTogglePlay, speed, 
           <option value={2}>2x</option>
           <option value={4}>4x</option>
           <option value={8}>8x</option>
+          <option value={16}>16x</option>
         </select>
       </div>
     </div>
@@ -2402,7 +2403,7 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
   useEffect(() => { playRef.current = isPlaying; }, [isPlaying]);
   useEffect(() => {
     if (!isPlaying) return;
-    const delay = Math.max(500, 3000 / speed);
+    const delay = Math.max(200, 1500 / speed);
     const timer = setTimeout(() => {
       if (playRef.current && !isBusy) advanceTick();
     }, delay);
