@@ -108,7 +108,7 @@ app.post("/api/image", async (req, res) => {
       body: JSON.stringify({
         model: "doubao-seedream-4-5-251128",
         prompt,
-        size: size || "1024x576",
+        size: size || "1280x720",
         response_format: "url",
         n: 1,
       }),
