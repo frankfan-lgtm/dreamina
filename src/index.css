@@ -276,6 +276,55 @@ body {
   border: 1px solid rgba(255, 215, 0, 0.15);
   margin: 3px 0;
 }
+/* ─── 场景插图 ─── */
+.narrative-scene-image {
+  margin: 6px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+  position: relative;
+}
+.narrative-scene-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  animation: img-fade-in 0.6s ease-out;
+}
+.narrative-scene-image-loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #9ca3af;
+  gap: 6px;
+}
+.narrative-scene-image-loading::before {
+  content: "🎨";
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+.narrative-scene-image-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+  animation: shimmer 2s ease-in-out infinite;
+}
+.narrative-scene-image-intervention {
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.08);
+}
+@keyframes img-fade-in {
+  from { opacity: 0; transform: scale(1.02); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 .narrative-loading {
   display: flex;
   align-items: center;

@@ -470,3 +470,58 @@ ${npc.thought ? '内心想法：' + npc.thought : ''}
 function clamp(val, min, max) {
   return Math.max(min, Math.min(max, val));
 }
+
+// ─── 场景图片生成 ───
+
+/**
+ * 通过 LLM 将中文叙事转成英文图片 prompt
+ */
+export async function generateImagePrompt(apiConfig, narrations, world, intervention) {
+  const scene = narrations.slice(0, 2).join("\n") || "";
+  const interventionText = intervention ? `[重大事件] ${intervention.name}: ${intervention.description}` : "";
+  const context = [scene, interventionText].filter(Boolean).join("\n");
+
+  if (!context) return null;
+
+  const sysPrompt = `You are an image prompt writer. Convert the Chinese narrative scene into a concise English prompt (under 80 words) for an AI image generator.
+Rules:
+- Focus on visual elements: setting, character poses, lighting, mood, atmosphere
+- Style: cinematic digital illustration, widescreen 16:9 composition
+- World setting: ${world.name} - ${(world.description || "").slice(0, 100)}
+- Do NOT include any text/words/letters in the image
+- Do NOT mention character names, use appearance descriptions instead
+- Include color palette and lighting direction
+- Output ONLY the prompt text, nothing else`;
+
+  const userPrompt = `将以下场景描述转为英文图片生成prompt:\n\n${context}`;
+
+  try {
+    const rawText = await callAPI(apiConfig, sysPrompt, userPrompt);
+    return rawText.trim().replace(/^["']|["']$/g, "");
+  } catch {
+    return `cinematic digital illustration, ${world.name}, dramatic scene, atmospheric lighting, widescreen 16:9`;
+  }
+}
+
+/**
+ * 调用图片生成 API
+ */
+export async function generateSceneImage(apiConfig, prompt) {
+  const res = await fetch("/api/image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt,
+      apiKey: apiConfig.apiKey,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`图片生成失败 (${res.status}): ${err}`);
+  }
+
+  const data = await res.json();
+  if (!data.url) throw new Error("图片API返回为空");
+  return data.url;
+}

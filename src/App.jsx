@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { WORLD_CONFIG, NPCS, INITIAL_RELATIONSHIPS, SCHEDULE_TEMPLATE, NPC_STATIONS } from "./world.js";
-import { simulateTick, applyResult, chatWithNPC } from "./engine.js";
+import { simulateTick, applyResult, chatWithNPC, generateImagePrompt, generateSceneImage } from "./engine.js";
 import { WORLD_PRESETS, generateWorld, autoAssignSprites } from "./sdk/index.js";
 
 // ─── 工具函数 ───
@@ -1390,7 +1390,7 @@ function CanvasMap({ locations, npcs, selectedNPC, onSelectNPC }) {
 }
 
 // ─── 叙事流（左栏 — 旁白+对话交替）───
-function NarrativeStream({ dialogues, npcs, isBusy }) {
+function NarrativeStream({ dialogues, npcs, isBusy, sceneImages }) {
   const npcMap = {};
   for (const n of npcs) npcMap[n.id] = n;
   const scrollRef = useRef(null);
@@ -1441,6 +1441,21 @@ function NarrativeStream({ dialogues, npcs, isBusy }) {
               <span className="narrative-chapter-time">{timeStr}</span>
               <div className="narrative-chapter-line"></div>
             </div>
+            {/* 场景插图 */}
+            {sceneImages?.[group.key] && sceneImages[group.key].status === "loading" && (
+              <div className="narrative-scene-image">
+                <div className="narrative-scene-image-loading">
+                  <span>场景生成中...</span>
+                </div>
+                <div className="narrative-scene-image-shimmer"></div>
+              </div>
+            )}
+            {sceneImages?.[group.key] && sceneImages[group.key].status === "ready" && (
+              <div className={"narrative-scene-image" + (sceneImages[group.key].intervention ? " narrative-scene-image-intervention" : "")}
+                   title={sceneImages[group.key].prompt || ""}>
+                <img src={sceneImages[group.key].url} alt="scene" loading="lazy" />
+              </div>
+            )}
             {group.items.map((d, i) => {
               if (d.type === 'narration') {
                 return (
@@ -2152,6 +2167,7 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
   const [speed, setSpeed] = useState(1);
   const [error, setError] = useState(null);
   const [showIntervention, setShowIntervention] = useState(false);
+  const [sceneImages, setSceneImages] = useState({});
   const [showSaveMenu, setShowSaveMenu] = useState(false);
   const playRef = useRef(false);
 
@@ -2294,6 +2310,23 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
         }
       }
 
+      // 异步生成场景插图（不阻塞主流程）
+      const timeKey = `${gameTime.day}-${gameTime.hour}`;
+      const currentNarrations = narrations;
+      const currentIntervention = intervention;
+      setSceneImages((prev) => ({ ...prev, [timeKey]: { status: "loading", url: null } }));
+      (async () => {
+        try {
+          const prompt = await generateImagePrompt(apiConfig, currentNarrations, world, currentIntervention);
+          if (!prompt) return;
+          const url = await generateSceneImage(apiConfig, prompt);
+          setSceneImages((prev) => ({ ...prev, [timeKey]: { status: "ready", url, prompt } }));
+        } catch (err) {
+          console.warn("场景图片生成失败:", err.message);
+          setSceneImages((prev) => ({ ...prev, [timeKey]: { status: "error" } }));
+        }
+      })();
+
       setIntervention(null);
 
       // 推进时间 — 根据日程表跳到下一个时段
@@ -2405,7 +2438,7 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
           <span>📖 叙事流</span>
           <span style={{color:'#9ca3af', fontSize:10}}>{dialogues.length}</span>
         </div>
-        <NarrativeStream dialogues={dialogues} npcs={npcs} isBusy={isBusy} />
+        <NarrativeStream dialogues={dialogues} npcs={npcs} isBusy={isBusy} sceneImages={sceneImages} />
       </div>
 
       {/* ── 中栏：世界预览 Canvas ── */}

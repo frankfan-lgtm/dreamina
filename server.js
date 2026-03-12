@@ -87,6 +87,55 @@ app.post("/api/claude", async (req, res) => {
   }
 });
 
+// ─── 图片生成代理 (Seedream) ───
+app.post("/api/image", async (req, res) => {
+  const { prompt, apiKey, size } = req.body;
+
+  if (!prompt) {
+    return res.status(400).json({ error: "缺少 prompt" });
+  }
+
+  const key = apiKey || process.env.API_KEY || "94090db7-6585-460e-a8ff-7830c1516624";
+  const url = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: "doubao-seedream-4-5-251128",
+        prompt,
+        size: size || "1024x576",
+        response_format: "url",
+        n: 1,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("图片API错误:", response.status, err);
+      return res.status(response.status).json({
+        error: `图片生成失败 (${response.status}): ${err}`,
+      });
+    }
+
+    const data = await response.json();
+    const imageUrl = data.data?.[0]?.url;
+    if (!imageUrl) {
+      console.error("图片API返回:", JSON.stringify(data));
+      return res.status(500).json({ error: "图片API返回内容为空" });
+    }
+
+    res.json({ url: imageUrl });
+  } catch (err) {
+    console.error("图片请求失败:", err.message);
+    res.status(500).json({ error: `图片请求失败: ${err.message}` });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`\n🌌 创世模拟器已启动！`);
   console.log(`👉 打开浏览器访问: http://localhost:${PORT}`);
