@@ -101,7 +101,7 @@ app.post("/api/image", async (req, res) => {
   const requestBody = {
     model: "doubao-seedream-4-5-251128",
     prompt,
-    size: size || "16:9",
+    size: size || "2560x1440",
     response_format: "b64_json",
     n: 1,
   };
