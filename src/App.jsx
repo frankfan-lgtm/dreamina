@@ -1394,10 +1394,32 @@ function NarrativeStream({ dialogues, npcs, isBusy, sceneImages }) {
   const npcMap = {};
   for (const n of npcs) npcMap[n.id] = n;
   const scrollRef = useRef(null);
+  const [revealCount, setRevealCount] = useState(0);
+  const prevLenRef = useRef(dialogues.length);
+
+  // 新内容到来时，逐段揭示
+  useEffect(() => {
+    if (dialogues.length > prevLenRef.current) {
+      const newItems = dialogues.length - prevLenRef.current;
+      prevLenRef.current = dialogues.length;
+      // 逐段揭示：每段间隔 400ms
+      let revealed = 0;
+      setRevealCount(dialogues.length - newItems); // 先只显示旧内容
+      const timer = setInterval(() => {
+        revealed++;
+        setRevealCount(dialogues.length - newItems + revealed);
+        if (revealed >= newItems) clearInterval(timer);
+      }, 400);
+      return () => clearInterval(timer);
+    } else {
+      prevLenRef.current = dialogues.length;
+      setRevealCount(dialogues.length);
+    }
+  }, [dialogues.length]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
-  }, [dialogues.length]);
+  }, [revealCount]);
 
   if (dialogues.length === 0) {
     return (
@@ -1410,10 +1432,13 @@ function NarrativeStream({ dialogues, npcs, isBusy, sceneImages }) {
     );
   }
 
+  // 只显示已揭示的内容
+  const visibleDialogues = dialogues.slice(0, revealCount);
+
   // 按时间段分组
   const grouped = [];
   let currentGroup = null;
-  for (const d of dialogues) {
+  for (const d of visibleDialogues) {
     const key = `${d.day}-${d.hour}`;
     if (!currentGroup || currentGroup.key !== key) {
       currentGroup = { key, day: d.day, hour: d.hour, items: [] };
@@ -1422,28 +1447,36 @@ function NarrativeStream({ dialogues, npcs, isBusy, sceneImages }) {
     currentGroup.items.push(d);
   }
 
+  // 判断某个item是否是刚刚揭示的（最新出现的那个）
+  const isNewestItem = (groupIdx, itemIdx, groups) => {
+    if (groupIdx !== 0) return false; // 只有最新章节
+    const g = groups[0];
+    return itemIdx === g.items.length - 1 && revealCount < dialogues.length;
+  };
+
   return (
     <div ref={scrollRef} className="narrative-stream">
-      {isBusy && (
+      {(isBusy || revealCount < dialogues.length) && (
         <div className="narrative-loading animate-fade-in">
           <div className="narrative-loading-dots">
             <span></span><span></span><span></span>
           </div>
-          <span>世界正在演进中...</span>
+          <span>{isBusy && revealCount >= dialogues.length ? "世界正在演进中..." : "故事正在展开..."}</span>
         </div>
       )}
       {[...grouped].reverse().slice(0, 30).map((group, gi) => {
         const timeStr = `第${group.day}天 · ${String(group.hour).padStart(2,'0')}:00`;
+        const reversedGroups = [...grouped].reverse();
         return (
-          <div key={group.key} className={"narrative-chapter animate-fade-in " + (gi === 0 ? "narrative-latest" : "")}>
-            <div className="narrative-chapter-header">
+          <div key={group.key} className={"narrative-chapter " + (gi === 0 ? "narrative-latest" : "")}>
+            <div className="narrative-chapter-header animate-fade-in">
               <div className="narrative-chapter-line"></div>
               <span className="narrative-chapter-time">{timeStr}</span>
               <div className="narrative-chapter-line"></div>
             </div>
             {/* 场景插图 */}
-            {sceneImages?.[group.key] && sceneImages[group.key].status === "loading" && (
-              <div className="narrative-scene-image">
+            {sceneImages?.[group.key] && sceneImages[group.key].status === "loading" && gi === 0 && (
+              <div className="narrative-scene-image animate-fade-in">
                 <div className="narrative-scene-image-loading">
                   <span>场景生成中...</span>
                 </div>
@@ -1459,24 +1492,22 @@ function NarrativeStream({ dialogues, npcs, isBusy, sceneImages }) {
             {group.items.map((d, i) => {
               if (d.type === 'narration') {
                 return (
-                  <div key={i} className="narrative-narration">
+                  <div key={i} className="narrative-narration animate-fade-in" style={gi === 0 ? {animationDelay: `${i * 0.1}s`} : undefined}>
                     <div className="narrative-narration-text">{d.content}</div>
                   </div>
                 );
               }
-              // dialogue (type === 'dialogue' or legacy format)
               const from = npcMap[d.from];
               const to = npcMap[d.to];
               if (!from) {
-                // event fallback
                 return (
-                  <div key={i} className="narrative-event">
+                  <div key={i} className="narrative-event animate-fade-in">
                     <span>{d.text || d.content}</span>
                   </div>
                 );
               }
               return (
-                <div key={i} className="narrative-dialogue">
+                <div key={i} className="narrative-dialogue animate-fade-in" style={gi === 0 ? {animationDelay: `${i * 0.1}s`} : undefined}>
                   <div className="narrative-dialogue-header">
                     <span className="narrative-dialogue-from">{from?.emoji} {from?.name}</span>
                     <span className="narrative-dialogue-arrow">→</span>
