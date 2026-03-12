@@ -1457,12 +1457,22 @@ function NarrativeStream({ dialogues, npcs, isBusy, sceneImages }) {
   return (
     <div ref={scrollRef} className="narrative-stream">
       {(isBusy || revealCount < dialogues.length) && (
-        <div className="narrative-loading animate-fade-in">
-          <div className="narrative-loading-dots">
-            <span></span><span></span><span></span>
+        <>
+          <div className="narrative-loading animate-fade-in">
+            <div className="narrative-loading-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <span>{isBusy && revealCount >= dialogues.length ? "世界正在演进中..." : "故事正在展开..."}</span>
           </div>
-          <span>{isBusy && revealCount >= dialogues.length ? "世界正在演进中..." : "故事正在展开..."}</span>
-        </div>
+          {isBusy && revealCount >= dialogues.length && (
+            <div className="narrative-skeleton animate-fade-in">
+              <div className="narrative-skeleton-line"></div>
+              <div className="narrative-skeleton-line"></div>
+              <div className="narrative-skeleton-line"></div>
+              <div className="narrative-skeleton-line"></div>
+            </div>
+          )}
+        </>
       )}
       {[...grouped].reverse().slice(0, 30).map((group, gi) => {
         const timeStr = `第${group.day}天 · ${String(group.hour).padStart(2,'0')}:00`;
@@ -2345,15 +2355,18 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
       const timeKey = `${gameTime.day}-${gameTime.hour}`;
       const currentNarrations = narrations;
       const currentIntervention = intervention;
+      console.log("[图片] 开始生成, timeKey:", timeKey, "narrations:", currentNarrations.length);
       setSceneImages((prev) => ({ ...prev, [timeKey]: { status: "loading", url: null } }));
       (async () => {
         try {
           const prompt = await generateImagePrompt(apiConfig, currentNarrations, world, currentIntervention);
+          console.log("[图片] prompt生成完毕:", prompt?.slice(0, 80));
           if (!prompt) return;
           const url = await generateSceneImage(apiConfig, prompt);
+          console.log("[图片] 图片生成成功:", url?.slice(0, 60));
           setSceneImages((prev) => ({ ...prev, [timeKey]: { status: "ready", url, prompt } }));
         } catch (err) {
-          console.warn("场景图片生成失败:", err.message);
+          console.warn("[图片] 生成失败:", err.message);
           setSceneImages((prev) => ({ ...prev, [timeKey]: { status: "error" } }));
         }
       })();

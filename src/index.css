@@ -55,7 +55,7 @@ body {
    ═══════════════════════════════════════════ */
 .simulation-layout {
   display: grid;
-  grid-template-columns: 340px 1fr 320px;
+  grid-template-columns: 1fr 340px 300px;
   grid-template-rows: auto 1fr auto;
   height: 100vh;
   overflow: hidden;
@@ -336,6 +336,27 @@ body {
   border-radius: 6px;
   border: 1px solid rgba(255, 215, 0, 0.12);
   margin-bottom: 6px;
+}
+/* 骨架屏：等待LLM时显示 */
+.narrative-skeleton {
+  padding: 6px 10px;
+  margin: 3px 0;
+}
+.narrative-skeleton-line {
+  height: 13px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #1a1a2e 25%, #252540 50%, #1a1a2e 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  margin-bottom: 8px;
+}
+.narrative-skeleton-line:nth-child(1) { width: 90%; }
+.narrative-skeleton-line:nth-child(2) { width: 75%; animation-delay: 0.15s; }
+.narrative-skeleton-line:nth-child(3) { width: 85%; animation-delay: 0.3s; }
+.narrative-skeleton-line:nth-child(4) { width: 60%; animation-delay: 0.45s; }
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 .narrative-loading-dots {
   display: flex;
