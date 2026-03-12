@@ -2417,6 +2417,7 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
               className="hover:text-accent">← 选世界</button>
           )}
           <span className="font-bold" style={{color:'#ffd700', fontSize:14}}>{wp.emoji || "⭐"} {world.name}</span>
+          <span style={{color:'#555', fontSize:8}}>v2.1</span>
           {error && <span style={{color:'#e94560', fontSize:11}}>{error}</span>}
           {savedState && dialogues.length > 0 && gameTime.day === savedState.gameTime?.day && gameTime.hour === savedState.gameTime?.hour && (
             <span style={{color:'#58c878', fontSize:10, opacity:0.7}}>已恢复存档</span>
