@@ -1499,6 +1499,11 @@ function NarrativeStream({ dialogues, npcs, isBusy, sceneImages }) {
                 <img src={sceneImages[group.key].url} alt="scene" loading="lazy" />
               </div>
             )}
+            {sceneImages?.[group.key] && sceneImages[group.key].status === "error" && gi === 0 && (
+              <div style={{fontSize:10, color:'#e94560', padding:'4px 10px', opacity:0.7}}>
+                图片生成失败 — 检查终端日志
+              </div>
+            )}
             {group.items.map((d, i) => {
               if (d.type === 'narration') {
                 return (

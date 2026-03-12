@@ -98,6 +98,15 @@ app.post("/api/image", async (req, res) => {
   const key = apiKey || process.env.API_KEY || "94090db7-6585-460e-a8ff-7830c1516624";
   const url = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
 
+  const requestBody = {
+    model: "doubao-seedream-4-5-251128",
+    prompt,
+    size: size || "16:9",
+    response_format: "b64_json",
+    n: 1,
+  };
+  console.log("[图片API] 请求:", JSON.stringify(requestBody).slice(0, 200));
+
   try {
     const response = await fetch(url, {
       method: "POST",
@@ -105,33 +114,32 @@ app.post("/api/image", async (req, res) => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${key}`,
       },
-      body: JSON.stringify({
-        model: "doubao-seedream-4-5-251128",
-        prompt,
-        size: size || "1280x720",
-        response_format: "url",
-        n: 1,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
       const err = await response.text();
-      console.error("图片API错误:", response.status, err);
+      console.error("[图片API] 错误:", response.status, err.slice(0, 500));
       return res.status(response.status).json({
-        error: `图片生成失败 (${response.status}): ${err}`,
+        error: `图片生成失败 (${response.status}): ${err.slice(0, 200)}`,
       });
     }
 
     const data = await response.json();
-    const imageUrl = data.data?.[0]?.url;
-    if (!imageUrl) {
-      console.error("图片API返回:", JSON.stringify(data));
+    console.log("[图片API] 返回keys:", Object.keys(data), "data长度:", data.data?.length);
+
+    // 优先取 url，其次取 b64_json
+    const item = data.data?.[0];
+    if (item?.url) {
+      res.json({ url: item.url });
+    } else if (item?.b64_json) {
+      res.json({ url: `data:image/png;base64,${item.b64_json}` });
+    } else {
+      console.error("[图片API] 返回内容为空:", JSON.stringify(data).slice(0, 500));
       return res.status(500).json({ error: "图片API返回内容为空" });
     }
-
-    res.json({ url: imageUrl });
   } catch (err) {
-    console.error("图片请求失败:", err.message);
+    console.error("[图片API] 请求失败:", err.message);
     res.status(500).json({ error: `图片请求失败: ${err.message}` });
   }
 });
