@@ -2,7 +2,7 @@
  * NPC 选择栏 — 面板底部的 emoji 按钮列表
  */
 import React from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 
 export default function NpcSelector() {
   const { npcs, selectedNpcId, setSelectedNpcId } = useStore();

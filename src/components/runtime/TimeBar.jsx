@@ -2,7 +2,7 @@
  * 底部时间条 — 播放/暂停、进度条、速度选择
  */
 import React from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 
 // 一天 6 个 tick: 7,10,13,16,19,22
 const HOURS = [7, 10, 13, 16, 19, 22];

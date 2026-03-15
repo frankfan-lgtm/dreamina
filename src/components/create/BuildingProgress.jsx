@@ -2,7 +2,7 @@
  * 世界构建进度页 — 显示构建师的工作进度
  */
 import React, { useEffect, useState, useRef } from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 import ProgressBar from "../common/ProgressBar.jsx";
 
 // 构建步骤定义

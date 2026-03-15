@@ -2,7 +2,7 @@
  * 顶部状态栏 — 世界名称、时间、播放控制、导演开关、天命按钮
  */
 import React, { useState } from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 
 export default function TopBar() {
   const {

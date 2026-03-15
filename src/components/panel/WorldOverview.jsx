@@ -2,7 +2,7 @@
  * 世界总览面板 — 资源仪表盘、张力热力图、事件流
  */
 import React from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 import ProgressBar from "../common/ProgressBar.jsx";
 
 function ResourceDashboard({ resources }) {

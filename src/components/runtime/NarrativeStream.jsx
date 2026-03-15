@@ -4,7 +4,7 @@
  * 流式追加新内容，自动滚动
  */
 import React, { useEffect, useRef, useState } from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 
 // 叙事条目类型:
 // narration  — 旁白（灰色斜体）

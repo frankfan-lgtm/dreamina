@@ -3,7 +3,7 @@
  * 主应用组件：页面路由 + 全局 Provider
  */
 import React from "react";
-import { StoreProvider, useStore } from "./store/useStore.js";
+import { StoreProvider, useStore } from "./store/useStore.jsx";
 import CreateWorld from "./components/create/CreateWorld.jsx";
 import WorldAnalysisView from "./components/create/WorldAnalysisView.jsx";
 import BuildingProgress from "./components/create/BuildingProgress.jsx";

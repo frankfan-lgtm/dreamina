@@ -2,7 +2,7 @@
  * 世界分析确认页 — 展示分析结果，确认后进入构建
  */
 import React from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 
 export default function WorldAnalysisView() {
   const {

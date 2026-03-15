@@ -2,7 +2,7 @@
  * 右侧透视面板容器 — 根据 selectedNpcId 切换世界总览 / NPC 档案
  */
 import React from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 import WorldOverview from "./WorldOverview.jsx";
 import NPCProfile from "./NPCProfile.jsx";
 import NpcSelector from "./NpcSelector.jsx";

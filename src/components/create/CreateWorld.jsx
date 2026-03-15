@@ -2,7 +2,7 @@
  * 世界创建页面 — 用户描述世界或选择预设
  */
 import React, { useState } from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 import { WORLD_PRESETS, generateWorld } from "../../sdk/index.js";
 
 // 预设列表（从 SDK 加载 + 预留更多）

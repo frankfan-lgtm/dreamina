@@ -3,7 +3,7 @@
  * 左侧叙事流 + 右侧透视面板 + 顶部状态栏 + 底部时间条
  */
 import React, { useEffect, useRef, useCallback } from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 import TopBar from "./TopBar.jsx";
 import TimeBar from "./TimeBar.jsx";
 import NarrativeStream from "./NarrativeStream.jsx";

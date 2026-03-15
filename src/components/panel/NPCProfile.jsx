@@ -3,7 +3,7 @@
  * 灵魂 / 目标 / 记忆 / 技能 / 状态 / 关系 / 决策
  */
 import React, { useState } from "react";
-import { useStore } from "../../store/useStore.js";
+import { useStore } from "../../store/useStore.jsx";
 import ProgressBar from "../common/ProgressBar.jsx";
 import RadarChart from "../common/RadarChart.jsx";
 
