@@ -214,6 +214,101 @@
   <tr><td>模型异质性提升效果</td><td>不同基因 = 不同认知风格 = 天然异质性</td></tr>
 </table>
 
+<!-- ============== Section 3.6 ============== -->
+<h3 class="page-break">3.6 为什么"预测下一帧"和 Sub-Agent 出不来真正的创意</h3>
+
+<p>当前 AI 内容生成有两条主流路线，我们认为它们都有根本性的创造力天花板：</p>
+
+<h4>路线 A："预测下一帧"（Sora、Runway 等视频生成）</h4>
+
+<p>核心算法：给定前 N 帧，预测第 N+1 帧。本质是在训练数据的分布内做<strong>统计外推</strong>。</p>
+
+<div class="highlight">
+  <strong>问题：最可能的下一帧，恰恰是最没创意的下一帧。</strong><br><br>
+  创意的定义就是"出人意料"。但预测模型的优化目标是"最大似然"——它永远在追求最可能发生的事。<br><br>
+  它能生成视觉上惊艳的画面，但不能生成叙事上出人意料的转折。它是<strong>高级插值</strong>，不是创造。
+</div>
+
+<ul>
+  <li><strong>没有意图</strong>：模型不知道角色"想要什么"，只知道像素统计规律</li>
+  <li><strong>没有冲突</strong>：没有多个目标在竞争，就没有戏剧张力的来源</li>
+  <li><strong>没有信息不对称</strong>：模型是全知的，没有"角色 A 不知道角色 B 的秘密"这种结构</li>
+  <li><strong>没有涌现</strong>：输出完全被输入决定，不可能产生超出训练分布的新模式</li>
+</ul>
+
+<p>类比：让一个人看了一万部电影，然后让他"预测下一个镜头"——他会给出一个<strong>合理</strong>的镜头，但不会给出一个<strong>伟大</strong>的镜头。伟大的镜头来自导演的意图、角色的冲突、观众的期待被打破。</p>
+
+<h4>路线 B：Sub-Agent 层级调用（单脑多手）</h4>
+
+<p>架构：一个主 Agent 拆解任务，分派给多个 Sub-Agent 执行，汇总结果。</p>
+
+<div class="highlight">
+  <strong>问题：Sub-Agent 是"手"，不是"脑"。创意的天花板 = 主 Agent 一个人的想象力。</strong>
+</div>
+
+<table>
+  <tr><th style="width:160px">维度</th><th>Sub-Agent（层级式）</th><th>Multi-Agent（蜂群式）</th></tr>
+  <tr>
+    <td><strong>谁在思考？</strong></td>
+    <td>只有主 Agent 在思考，Sub-Agent 执行指令</td>
+    <td>每个 Agent 都在独立思考，有自己的判断</td>
+  </tr>
+  <tr>
+    <td><strong>信息对称性</strong></td>
+    <td>主 Agent 全知，Sub-Agent 只知道被分配的部分</td>
+    <td>每个 Agent 只知道自己看到的——<strong>误解和信息差产生意外</strong></td>
+  </tr>
+  <tr>
+    <td><strong>能否产生分歧？</strong></td>
+    <td>不能。Sub-Agent 服从主 Agent 的规划</td>
+    <td>天然产生分歧——<strong>分歧是创意的来源</strong></td>
+  </tr>
+  <tr>
+    <td><strong>意外/惊喜</strong></td>
+    <td>不可能。输出完全在主 Agent 的预期内</td>
+    <td>常态。独立 Agent 的行为组合产生<strong>谁都没预料到的结果</strong></td>
+  </tr>
+  <tr>
+    <td><strong>创意天花板</strong></td>
+    <td>= 主 Agent 的能力上限</td>
+    <td>= 所有 Agent 能力的<strong>涌现组合</strong>，理论上无上限</td>
+  </tr>
+  <tr>
+    <td><strong>类比</strong></td>
+    <td>一个导演指挥群演——导演想到哪，故事就到哪</td>
+    <td>一群真人在即兴表演——<strong>连演员自己都不知道下一秒会发生什么</strong></td>
+  </tr>
+</table>
+
+<p>Sub-Agent 模式的根本问题是<strong>单点创意瓶颈</strong>：</p>
+<ol>
+  <li>主 Agent 先想好了故事大纲（创意已经被锁定）</li>
+  <li>Sub-Agent 只是在执行大纲（写第一章、写第二章...）</li>
+  <li>任何 Sub-Agent 都不会挑战主 Agent 的规划</li>
+  <li>最终产出 = 一个人的想法被多手执行，<strong>不会产生超出规划的涌现</strong></li>
+</ol>
+
+<h4>Dreamina 的路线：多智能体涌现</h4>
+
+<p>我们不预测下一帧，也不用一个脑指挥多只手。我们让<strong>多个独立的脑各自行动</strong>：</p>
+
+<div class="two-col">
+  <div class="card">
+    <h4>为什么能产生真创意？</h4>
+    <ul>
+      <li>每个 Agent 有独立目标 → <strong>目标冲突</strong>产生戏剧</li>
+      <li>每个 Agent 信息有限 → <strong>误解</strong>驱动意外</li>
+      <li>每个 Agent 性格不同 → <strong>反应差异</strong>产生多样性</li>
+      <li>没有全知的编剧 → <strong>连系统自己都不知道下一步会发生什么</strong></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>创意的涌现公式</h4>
+    <p>独立目标<br>+ 有限信息<br>+ 性格差异<br>+ 资源稀缺<br><strong>= 冲突、合作、背叛、牺牲自然涌现</strong></p>
+    <p style="font-size:12px;color:#666;margin-top:8px">不是编出来的，是长出来的。<br>不是一个人的想象力，是一个社会的复杂性。</p>
+  </div>
+</div>
+
 <!-- ============== Section 4 ============== -->
 <h2 class="page-break">四、产品方案</h2>
 
