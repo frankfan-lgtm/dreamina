@@ -24,9 +24,9 @@ app.post("/api/claude", async (req, res) => {
     return res.status(400).json({ error: "缺少 systemPrompt 或 userPrompt/messages" });
   }
 
-  const key = apiKey || process.env.API_KEY || "94090db7-6585-460e-a8ff-7830c1516624";
+  const key = apiKey || process.env.API_KEY;
   if (!key) {
-    return res.status(400).json({ error: "缺少 API Key" });
+    return res.status(400).json({ error: "缺少 API Key，请在界面设置中输入或设置环境变量 API_KEY" });
   }
 
   const url = baseUrl || process.env.API_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
@@ -95,7 +95,7 @@ app.post("/api/image", async (req, res) => {
     return res.status(400).json({ error: "缺少 prompt" });
   }
 
-  const key = apiKey || process.env.API_KEY || "94090db7-6585-460e-a8ff-7830c1516624";
+  const key = apiKey || process.env.API_KEY;
   const url = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
 
   const requestBody = {
