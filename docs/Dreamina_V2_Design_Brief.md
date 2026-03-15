@@ -111,6 +111,54 @@ Anthropic 的多 Agent 协作框架，用于软件工程任务。
 
 ---
 
+### 3.5 学术论据：多智能体创造力 > 单智能体
+
+> **核心论点：** 创作型 Agent 的架构应该是"蜂群"去中心化的 Multi-Agent，而不是 Sub-Agent 层级调用。学术研究表明，**多个独立 Agent 协作的创造力显著优于单 Agent 或层级式 Sub-Agent**。
+
+**关键论文 #1：Creativity in LLM-based Multi-Agent Systems: A Survey**
+*Lin et al., EMNLP 2025 · 台湾大学 & 李宏毅团队 · arXiv 2505.21116*
+
+首篇系统性研究 LLM 多智能体创造力的综述。核心结论：
+- **"协作结构能释放超越孤立 LLM 或个体所能达到的创造潜力"**
+- Agent 主动性分类框架（Planning/Process/Decision-Making），发现现有系统在规划阶段主动性普遍偏低——多智能体创造力潜力尚未被充分挖掘
+- 多 Agent 的角色多样性（persona diversity）是创造力提升的关键因素
+
+**关键论文 #2：Agents' Room — Narrative Generation through Multi-step Collaboration**
+*Huot et al. (Google DeepMind), ICLR 2025 · arXiv 2410.02603*
+
+多 Agent 协作写故事 vs 单 Agent 的直接对比：
+- 架构：规划 Agent 组 + 写作 Agent 组 + 协调器 + 共享草稿板
+- **人类专家评估：多 Agent 在所有四个维度上优于单 Agent，其中创造力维度优势最大**
+- 多 Agent 文本与 prompt 重复度更低（创造性发散），单 Agent 倾向复述 prompt
+
+**关键论文 #3：Exploring Design of Multi-Agent LLM Dialogues for Research Ideation**
+*Ueda et al., SIGDIAL 2025 · arXiv 2507.08350*
+
+系统性实验探索多 Agent 创意生成的最优配置：
+- **最优配置：3 个并行批评者 + 2-3 轮迭代深化**
+- 增加 Agent 多样性 → 提升创意多样性；增加迭代深度 → 提升质量且不损害多样性
+- 角色异质性是关键——这正是 Dreamina 基因系统的设计初衷
+
+**关键论文 #4：Towards a Science of Scaling Agent Systems**
+*Google Research & DeepMind & MIT, 2025 · arXiv 2512.08296*
+
+180 组对照实验，5 种架构，最严谨的多 Agent 规模化研究：
+- 可并行任务：多 Agent 比单 Agent **提升 80.9%**
+- 45% 阈值规则：单 Agent 准确率 < 45% 时，多 Agent 协调收益 > 成本
+- 模型异质性普遍提升效果——支持"不同基因 = 不同认知方式"的设计
+
+**对 Dreamina 的启示：**
+
+| 学术发现 | Dreamina V2 对应设计 |
+|---------|---------------------|
+| 多 Agent 协作创造力 > 单 Agent | 每个 NPC 独立 Agent，不是一个 LLM 演所有人 |
+| 角色多样性是创造力关键 | 基因系统量化性格差异，确保每个 Agent 视角不同 |
+| 迭代深度提升质量 | 动态对话轮次，不是固定一轮 |
+| 并行 + 协调优于层级调用 | NPC 并行决策 + 世界引擎协调，不是 Sub-Agent 层级 |
+| 模型异质性提升效果 | 不同基因 = 不同认知风格 = 天然异质性 |
+
+---
+
 ## 四、产品方案
 
 ### 4.1 元系统架构：两层 Agent 体系

@@ -160,6 +160,60 @@
   <tr><td>工作记忆容量限制 (Baddeley)</td><td>每次决策只能调用有限条相关记忆</td></tr>
 </table>
 
+<!-- ============== Section 3.5 ============== -->
+<h3 class="page-break">3.5 学术论据：多智能体创造力 &gt; 单智能体</h3>
+
+<div class="highlight">
+  <strong>核心论点：</strong>创作型 Agent 的架构应该是"蜂群"去中心化的 Multi-Agent，而不是 Sub-Agent 层级调用。学术研究表明，<strong>多个独立 Agent 协作的创造力显著优于单 Agent 或层级式 Sub-Agent</strong>。
+</div>
+
+<p><strong>关键论文 #1：Creativity in LLM-based Multi-Agent Systems: A Survey</strong><br>
+<span style="color:#666">Lin et al., EMNLP 2025 · 台湾大学 &amp; 李宏毅团队 · arXiv 2505.21116</span></p>
+<p>首篇系统性研究 LLM 多智能体创造力的综述论文。核心结论：</p>
+<ul>
+  <li><strong>"协作结构能释放超越孤立 LLM 或个体所能达到的创造潜力"</strong>（collaborative structures can unlock creative potentials that exceed what isolated LLMs can achieve）</li>
+  <li>提出了 Agent 主动性分类框架（Planning / Process / Decision-Making 三阶段），发现现有系统在规划阶段的 Agent 主动性普遍偏低——意味着多智能体的创造力潜力尚未被充分挖掘</li>
+  <li>多 Agent 的角色多样性（persona diversity）是创造力提升的关键因素</li>
+</ul>
+
+<p><strong>关键论文 #2：Agents' Room — Narrative Generation through Multi-step Collaboration</strong><br>
+<span style="color:#666">Huot et al. (Google DeepMind), ICLR 2025 · arXiv 2410.02603</span></p>
+<p>多 Agent 协作写故事 vs 单 Agent 写故事的直接对比实验：</p>
+<ul>
+  <li>架构：规划 Agent 组（冲突、情节、角色、场景）+ 写作 Agent 组（起承转合结）+ 协调器 + 共享草稿板</li>
+  <li><strong>人类专家评估：多 Agent 在所有四个维度上优于单 Agent，其中创造力维度的优势最大</strong></li>
+  <li>多 Agent 生成的文本与 prompt 的重复度更低（类似人类写作的创造性发散），单 Agent 则倾向于复述 prompt</li>
+</ul>
+
+<p><strong>关键论文 #3：Exploring Design of Multi-Agent LLM Dialogues for Research Ideation</strong><br>
+<span style="color:#666">Ueda et al., SIGDIAL 2025 · arXiv 2507.08350</span></p>
+<p>系统性实验探索了多 Agent 创意生成的最优配置：</p>
+<ul>
+  <li>测试了 7 种对话配置 × 7 个研究主题</li>
+  <li><strong>最优配置：3 个并行批评者 + 2-3 轮迭代深化</strong></li>
+  <li>增加 Agent 多样性 → 提升创意多样性；增加迭代深度 → 提升创意质量且不损害多样性</li>
+  <li>角色异质性（不同专长、不同视角）是关键——这正是 Dreamina 基因系统的设计初衷</li>
+</ul>
+
+<p><strong>关键论文 #4：Towards a Science of Scaling Agent Systems</strong><br>
+<span style="color:#666">Google Research &amp; DeepMind &amp; MIT, 2025 · arXiv 2512.08296</span></p>
+<p>180 组对照实验，5 种架构，3 家 LLM，最严谨的多 Agent 规模化研究：</p>
+<ul>
+  <li>可并行任务：多 Agent 比单 Agent <strong>提升 80.9%</strong>（集中式协调）</li>
+  <li>45% 阈值规则：单 Agent 准确率低于 45% 时，多 Agent 协调收益 &gt; 协调成本</li>
+  <li>模型异质性（混合不同模型）普遍提升多 Agent 效果——支持 Dreamina "不同基因 = 不同认知方式"的设计</li>
+</ul>
+
+<p><strong>对 Dreamina 的启示：</strong></p>
+<table>
+  <tr><th>学术发现</th><th>Dreamina V2 的对应设计</th></tr>
+  <tr><td>多 Agent 协作创造力 &gt; 单 Agent</td><td>每个 NPC 独立 Agent，不是一个 LLM 演所有人</td></tr>
+  <tr><td>角色多样性是创造力关键</td><td>基因系统量化性格差异，确保每个 Agent 视角不同</td></tr>
+  <tr><td>迭代深度提升质量</td><td>动态对话轮次（有话继续聊），不是固定一轮</td></tr>
+  <tr><td>并行 + 协调优于层级调用</td><td>NPC 并行决策 + 世界引擎协调，不是 Sub-Agent 层级</td></tr>
+  <tr><td>模型异质性提升效果</td><td>不同基因 = 不同认知风格 = 天然异质性</td></tr>
+</table>
+
 <!-- ============== Section 4 ============== -->
 <h2 class="page-break">四、产品方案</h2>
 
