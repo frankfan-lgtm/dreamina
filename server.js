@@ -6,6 +6,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3456;
 
+// ─── 默认 API 配置（写死，页面可覆盖模型名称）───
+const DEFAULT_API_KEY = "94090db7-6585-460e-a8ff-7830c1516624";
+const DEFAULT_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+const DEFAULT_MODEL = "doubao-seed-2-0-lite-260215";
+
 // ─── 允许的 API 主机白名单 ───
 const ALLOWED_HOSTS = [
   "ark.cn-beijing.volces.com",
@@ -249,18 +254,18 @@ function extractLLMParams(body) {
     return { error: "缺少 systemPrompt 或 userPrompt/messages" };
   }
 
-  const key = apiKey || process.env.API_KEY;
+  const key = apiKey || DEFAULT_API_KEY;
   if (!key) {
-    return { error: "缺少 API Key，请在界面设置中输入或设置环境变量 API_KEY" };
+    return { error: "缺少 API Key" };
   }
 
-  const url = baseUrl || process.env.API_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+  const url = baseUrl || DEFAULT_BASE_URL;
   const urlCheck = validateApiUrl(url);
   if (!urlCheck.valid) {
     return { error: urlCheck.error };
   }
 
-  const modelId = model || process.env.API_MODEL || "deepseek-v3-2-251201";
+  const modelId = model || DEFAULT_MODEL;
   if (!modelId) {
     return { error: "缺少模型/接入点 ID，请在界面设置中输入（如 ep-xxxxx 或 doubao-pro-32k）" };
   }
@@ -461,9 +466,9 @@ app.post("/api/image", async (req, res) => {
     return res.status(400).json({ error: "缺少 prompt" });
   }
 
-  const key = apiKey || process.env.API_KEY;
+  const key = apiKey || DEFAULT_API_KEY;
   if (!key) {
-    return res.status(400).json({ error: "缺少 API Key，请在界面设置中输入或设置环境变量 API_KEY" });
+    return res.status(400).json({ error: "缺少 API Key" });
   }
   const url = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
 
