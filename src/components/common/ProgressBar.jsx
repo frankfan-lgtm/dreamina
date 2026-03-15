@@ -8,9 +8,9 @@ export default function ProgressBar({ value = 0, max = 100, color = "#ffd700", h
 
   return (
     <div className="w-full">
-      {label && (
+      {(label || showPercent) && (
         <div className="flex justify-between items-center mb-1">
-          <span className="text-xs text-[--color-text-dim]">{label}</span>
+          {label ? <span className="text-xs text-[--color-text-dim]">{label}</span> : <span />}
           {showPercent && <span className="text-xs text-[--color-text-dim]">{Math.round(pct)}%</span>}
         </div>
       )}

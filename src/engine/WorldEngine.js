@@ -681,6 +681,17 @@ export class WorldEngine {
     this._tensions.length = 0;
     this._injectedEvents.length = 0;
     this._emitter.removeAllListeners();
+
+    // 重新注册内部 tick 钩子（removeAllListeners 会清除它们）
+    this._scheduler.beforeTick(async (gameTime) => {
+      this._emitter.emit('tick:before', gameTime);
+    });
+
+    this._scheduler.afterTick(async (gameTime, decisions) => {
+      this._resourceManager.tickRegenerate(gameTime.tickCount);
+      this._processInjectedEvents(gameTime);
+      this._emitter.emit('tick:after', { gameTime, decisions });
+    });
   }
 }
 

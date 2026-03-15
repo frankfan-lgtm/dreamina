@@ -23,9 +23,14 @@ const MAX_CONCURRENT_LLM = 10;
  * @returns {Promise<void>}
  */
 function acquireLLMSlot() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("获取 LLM 并发槽位超时（30秒）"));
+    }, 30000);
+
     const tryAcquire = () => {
       if (activeLLMRequests < MAX_CONCURRENT_LLM) {
+        clearTimeout(timeout);
         activeLLMRequests++;
         resolve();
       } else {
@@ -37,7 +42,7 @@ function acquireLLMSlot() {
 }
 
 function releaseLLMSlot() {
-  activeLLMRequests--;
+  activeLLMRequests = Math.max(0, activeLLMRequests - 1);
 }
 
 // ─── 中间件 ───
@@ -158,7 +163,7 @@ async function callLLM({ url, key, modelId, apiMessages, maxTokens = 4096, tempe
  * @param {number} retries - 最大重试次数
  * @returns {Promise<string>} 完整文本
  */
-async function callLLMStream({ url, key, modelId, apiMessages, maxTokens = 4096, temperature = 0.8 }, onChunk, retries = 2) {
+async function callLLMStream({ url, key, modelId, apiMessages, maxTokens = 4096, temperature = 0.8 }, onChunk, retries = 0) {
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {

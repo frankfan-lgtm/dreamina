@@ -382,7 +382,7 @@ ${relatedSemantic.length > 0 ? relatedSemantic.map((m, i) => `[${i}] id=${m.id}:
       // 无支撑证据 → 信心度衰减
       if (survivingSupport.length === 0) {
         const hoursSinceValidated = (now - mem.lastValidated) / (1000 * 3600);
-        mem.confidence -= hoursSinceValidated * 0.01;
+        mem.confidence = Math.max(0, mem.confidence - hoursSinceValidated * 0.01);
       }
 
       if (mem.confidence < 0.1) {
@@ -434,7 +434,7 @@ ${existingBeliefs}
 
     try {
       const raw = await llmClient.call(systemPrompt, userPrompt);
-      const parsed = JSON.parse(raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim());
+      const parsed = this._safeParseJSON(raw);
 
       const newBeliefs = [];
       for (const item of parsed) {

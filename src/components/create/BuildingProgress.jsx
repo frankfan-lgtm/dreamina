@@ -22,6 +22,7 @@ export default function BuildingProgress() {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedNpcs, setCompletedNpcs] = useState([]);
   const timerRef = useRef(null);
+  const pageTimeoutRef = useRef(null);
 
   useEffect(() => {
     // 模拟构建过程
@@ -32,7 +33,7 @@ export default function BuildingProgress() {
       if (step >= totalSteps) {
         clearInterval(timerRef.current);
         // 延迟后跳转到运行时
-        setTimeout(() => setCurrentPage("runtime"), 800);
+        pageTimeoutRef.current = setTimeout(() => setCurrentPage("runtime"), 800);
         return;
       }
 
@@ -73,6 +74,7 @@ export default function BuildingProgress() {
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (pageTimeoutRef.current) clearTimeout(pageTimeoutRef.current);
     };
   }, []);
 

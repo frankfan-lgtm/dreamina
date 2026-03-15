@@ -8,7 +8,7 @@ import TopBar from "./TopBar.jsx";
 import TimeBar from "./TimeBar.jsx";
 import NarrativeStream from "./NarrativeStream.jsx";
 import InspectorPanel from "../panel/InspectorPanel.jsx";
-import { simulateTick, applyResult } from "../../engine.js";
+import { simulateTick, applyResult, getAgent } from "../../engine/SimulationAdapter.js";
 
 // 每个 tick 的时间间隔 3 小时: 7→10→13→16→19→22→下一天7
 const TICK_HOURS = [7, 10, 13, 16, 19, 22];
@@ -36,19 +36,25 @@ export default function SimulationRuntime() {
   const isSimulatingRef = useRef(false);
   const runningRef = useRef(isRunning);
   runningRef.current = isRunning;
+  const npcsRef = useRef(npcs);
+  npcsRef.current = npcs;
+  const gameTimeRef = useRef(gameTime);
+  gameTimeRef.current = gameTime;
 
   // 执行一个 tick
   const executeTick = useCallback(async () => {
     if (isSimulatingRef.current) return;
-    if (!worldConfig || npcs.length === 0) return;
+    const currentNpcs = npcsRef.current;
+    const currentGameTime = gameTimeRef.current;
+    if (!worldConfig || currentNpcs.length === 0) return;
 
     isSimulatingRef.current = true;
     setIsNarrativeLoading(true);
 
     try {
       // 添加章节分隔
-      const timeStr = `第${gameTime.day}天 ${String(gameTime.hour).padStart(2, "0")}:00`;
-      const scheduleItem = schedule?.find((s) => s.hour === gameTime.hour);
+      const timeStr = `第${currentGameTime.day}天 ${String(currentGameTime.hour).padStart(2, "0")}:00`;
+      const scheduleItem = schedule?.find((s) => s.hour === currentGameTime.hour);
       appendNarrative({
         type: "chapter",
         time: `${timeStr} ${scheduleItem?.label || ""}`,
@@ -69,85 +75,121 @@ export default function SimulationRuntime() {
       }
 
       // 调用模拟引擎
-      const result = await simulateTick(apiConfig, worldConfig, npcs, gameTime, intervention);
+      const result = await simulateTick(apiConfig, worldConfig, currentNpcs, currentGameTime, intervention);
 
       // 应用结果到 NPC 状态
-      const updatedNpcs = applyResult([...npcs.map((n) => ({ ...n }))], result);
+      const updatedNpcs = applyResult([...currentNpcs.map((n) => ({ ...n }))], result);
+      // 合并 V2 Agent 的记忆和决策链数据（供面板展示）
+      for (const npc of updatedNpcs) {
+        const agent = getAgent(npc.id);
+        if (agent) {
+          const agentState = agent.getState();
+          npc.memories = agentState.memories;
+          npc.decisionChain = agentState.decisionChain;
+          npc.personality = agentState.personality;
+        }
+      }
       setNpcs(updatedNpcs);
 
-      // 构建叙事条目
+      // 构建叙事条目 — 优先使用V2导演叙事，降级到V1兼容格式
       const entries = [];
 
-      // 旁白
-      if (result.narrations) {
-        for (const narration of result.narrations) {
-          entries.push({ type: "narration", text: narration });
+      if (result.director?.narrative?.length > 0) {
+        // V2 导演叙事：直接使用导演编排的叙事序列
+        for (const item of result.director.narrative) {
+          switch (item.type) {
+            case "narration":
+              entries.push({ type: "narration", text: item.text });
+              break;
+            case "dialogue":
+              entries.push({
+                type: "dialogue",
+                from: item.from,
+                to: item.to,
+                text: item.content,
+                subtext: item.subtext,
+              });
+              break;
+            case "info_gap":
+              entries.push({
+                type: "info_gap",
+                text: item.description,
+                details: item.involvedNpcs?.join(" & ") || "",
+              });
+              break;
+            case "thought":
+              entries.push({
+                type: "thought",
+                npcId: item.npcId,
+                text: item.text,
+              });
+              break;
+            default:
+              entries.push({ type: "narration", text: item.text || item.description || "" });
+          }
         }
-      }
 
-      // 对话
-      if (result.talks) {
-        for (const talk of result.talks) {
-          entries.push({
-            type: "dialogue",
-            from: talk.f,
-            to: talk.t,
-            text: talk.s,
-            subtext: talk.subtext,
-          });
+        // 张力提示（高等级的）
+        if (result.director.tensions) {
+          for (const tension of result.director.tensions) {
+            if (tension.level >= 4) {
+              entries.push({
+                type: "info_gap",
+                text: `${tension.between.join(" vs ")} — ${tension.about}`,
+                details: `张力等级: ${tension.level}/5`,
+              });
+            }
+          }
         }
-      }
-
-      // 摘要作为旁白
-      if (result.sum) {
-        entries.push({ type: "narration", text: result.sum });
-      }
-
-      // NPC 思考
-      if (result.npcs) {
-        for (const npcResult of result.npcs) {
-          if (npcResult.th) {
+      } else {
+        // V1 降级：从结构化字段构建叙事
+        if (result.narrations) {
+          for (const narration of result.narrations) {
+            entries.push({ type: "narration", text: narration });
+          }
+        }
+        if (result.talks) {
+          for (const talk of result.talks) {
             entries.push({
-              type: "thought",
-              npcId: npcResult.id,
-              text: npcResult.th,
+              type: "dialogue",
+              from: talk.f,
+              to: talk.t,
+              text: talk.s,
+              subtext: talk.subtext,
             });
+          }
+        }
+        if (result.sum) {
+          entries.push({ type: "narration", text: result.sum });
+        }
+        if (result.npcs) {
+          for (const npcResult of result.npcs) {
+            if (npcResult.th) {
+              entries.push({
+                type: "thought",
+                npcId: npcResult.id,
+                text: npcResult.th,
+              });
+            }
+          }
+        }
+        if (result.tensions) {
+          for (const tension of result.tensions) {
+            if (tension.level >= 4) {
+              entries.push({
+                type: "info_gap",
+                text: `${tension.between.join(" vs ")} — ${tension.about}`,
+                details: `张力等级: ${tension.level}/5`,
+              });
+            }
           }
         }
       }
 
-      // 张力/冲突提示
-      if (result.tensions) {
-        for (const tension of result.tensions) {
-          if (tension.level >= 4) {
-            entries.push({
-              type: "info_gap",
-              text: `${tension.between.join(" vs ")} — ${tension.about}`,
-              details: `张力等级: ${tension.level}/5`,
-            });
-          }
-        }
-      }
+      appendNarratives(entries);
 
-      // 交错排列叙事和对话
-      const interleaved = [];
-      let ni = 0, di = 0;
-      const narrations = entries.filter((e) => e.type === "narration");
-      const dialogues = entries.filter((e) => e.type === "dialogue");
-      const others = entries.filter((e) => e.type !== "narration" && e.type !== "dialogue");
-
-      while (ni < narrations.length || di < dialogues.length) {
-        if (ni < narrations.length) interleaved.push(narrations[ni++]);
-        // 每段旁白后接 1-2 段对话
-        if (di < dialogues.length) interleaved.push(dialogues[di++]);
-        if (di < dialogues.length) interleaved.push(dialogues[di++]);
-      }
-      interleaved.push(...others);
-
-      appendNarratives(interleaved);
-
-      // 推进时间
-      setGameTime(getNextTime(gameTime));
+      // 推进时间（函数式更新，避免闭包读取旧值）
+      setGameTime(prev => getNextTime(prev));
 
     } catch (err) {
       console.error("Tick 执行失败:", err);
@@ -161,7 +203,7 @@ export default function SimulationRuntime() {
       isSimulatingRef.current = false;
       setIsNarrativeLoading(false);
     }
-  }, [worldConfig, npcs, apiConfig, gameTime, schedule, pendingIntervention]);
+  }, [worldConfig, apiConfig, schedule, pendingIntervention]);
 
   // 自动运行循环
   useEffect(() => {

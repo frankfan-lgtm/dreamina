@@ -66,8 +66,22 @@ export class CommunicationBus {
     /** @type {Message[]} 全局消息历史（用于回放/调试） */
     this._globalHistory = [];
 
+    /** 全局历史记录上限 */
+    this._maxGlobalHistory = 1000;
+
     /** @type {Array<Function>} 消息监听器 */
     this._listeners = [];
+  }
+
+  /**
+   * 向全局历史追加消息，超出上限时丢弃最旧的
+   * @param {Message} message
+   */
+  _pushToGlobalHistory(message) {
+    this._pushToGlobalHistory(message);
+    if (this._globalHistory.length > this._maxGlobalHistory) {
+      this._globalHistory.splice(0, this._globalHistory.length - this._maxGlobalHistory);
+    }
   }
 
   /**
@@ -155,7 +169,7 @@ export class CommunicationBus {
     };
 
     this._deliverToInbox(toId, message);
-    this._globalHistory.push(message);
+    this._pushToGlobalHistory(message);
     this._notifyListeners(message);
 
     return message;
@@ -191,7 +205,7 @@ export class CommunicationBus {
       };
 
       this._deliverToInbox(npcId, message);
-      this._globalHistory.push(message);
+      this._pushToGlobalHistory(message);
       this._notifyListeners(message);
       messages.push(message);
     }
@@ -236,7 +250,7 @@ export class CommunicationBus {
       };
 
       this._deliverToInbox(npcId, message);
-      this._globalHistory.push(message);
+      this._pushToGlobalHistory(message);
       this._notifyListeners(message);
       messages.push(message);
     }

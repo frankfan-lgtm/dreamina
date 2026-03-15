@@ -224,7 +224,7 @@ export class LLMClient {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeout);
 
-      const res = await fetch('/api/claude', {
+      const res = await fetch('/api/claude/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -281,7 +281,7 @@ export class LLMClient {
             if (payload === '[DONE]') continue;
             try {
               const parsed = JSON.parse(payload);
-              const chunk = parsed.delta?.text || parsed.text || parsed.content || '';
+              const chunk = parsed.chunk || parsed.delta?.text || parsed.text || parsed.content || '';
               if (chunk) {
                 fullText += chunk;
                 if (onChunk) onChunk(chunk);

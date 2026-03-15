@@ -6,3 +6,4 @@ export { WorldEngine, PHASE, MSG_TYPE } from './WorldEngine.js';
 export { TickScheduler } from './TickScheduler.js';
 export { CommunicationBus } from './CommunicationBus.js';
 export { ResourceManager } from './ResourceManager.js';
+export { simulateTick, applyResult, initAgents, getAgent, getAllAgentStates, resetAgents } from './SimulationAdapter.js';
