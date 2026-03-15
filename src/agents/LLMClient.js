@@ -212,102 +212,96 @@ export class LLMClient {
    */
   async callStream(systemPrompt, userPrompt, onChunk) {
     await this._semaphore.acquire();
+    let released = false;
+    const releaseSemaphore = () => {
+      if (!released) {
+        released = true;
+        this._semaphore.release();
+      }
+    };
 
-    let lastError;
-    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), this.timeout);
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeout);
 
-        const res = await fetch('/api/claude', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream',
-          },
-          body: JSON.stringify({
-            systemPrompt,
-            messages: [{ role: 'user', content: userPrompt }],
-            apiKey: this.apiConfig.apiKey,
-            baseUrl: this.apiConfig.baseUrl,
-            model: this.apiConfig.model,
-            stream: true,
-          }),
-          signal: controller.signal,
-        });
+      const res = await fetch('/api/claude', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
+        body: JSON.stringify({
+          systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+          apiKey: this.apiConfig.apiKey,
+          baseUrl: this.apiConfig.baseUrl,
+          model: this.apiConfig.model,
+          stream: true,
+        }),
+        signal: controller.signal,
+      });
 
-        clearTimeout(timer);
+      clearTimeout(timer);
 
-        if (!res.ok) {
-          const errText = await res.text();
-          if (res.status === 429 || res.status >= 500) {
-            throw new Error(`API错误 (${res.status}): ${errText}`);
-          }
-          this._semaphore.release();
-          throw new Error(`API错误 (${res.status}): ${errText}`);
-        }
+      if (!res.ok) {
+        const errText = await res.text();
+        releaseSemaphore();
+        throw new Error(`API错误 (${res.status}): ${errText}`);
+      }
 
-        // 如果服务端不支持流式，降级为普通响应
-        const contentType = res.headers.get('content-type') || '';
-        if (!contentType.includes('text/event-stream')) {
-          const data = await res.json();
-          const text = data.text || '';
-          if (onChunk) onChunk(text);
-          this._semaphore.release();
-          return text;
-        }
+      // 如果服务端不支持流式，降级为普通响应
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('text/event-stream')) {
+        const data = await res.json();
+        const text = data.text || '';
+        if (onChunk) onChunk(text);
+        releaseSemaphore();
+        return text;
+      }
 
-        // SSE 流式读取
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let fullText = '';
-        let buffer = '';
+      // SSE 流式读取
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
+        buffer += decoder.decode(value, { stream: true });
 
-          // 按 SSE 格式解析：以 "data: " 开头的行
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || ''; // 最后一行可能不完整，留在 buffer
+        // 按 SSE 格式解析：以 "data: " 开头的行
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // 最后一行可能不完整，留在 buffer
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const payload = line.slice(6);
-              if (payload === '[DONE]') continue;
-              try {
-                const parsed = JSON.parse(payload);
-                const chunk = parsed.delta?.text || parsed.text || parsed.content || '';
-                if (chunk) {
-                  fullText += chunk;
-                  if (onChunk) onChunk(chunk);
-                }
-              } catch {
-                // 非 JSON 的 data 行，直接作为文本处理
-                if (payload && payload !== '[DONE]') {
-                  fullText += payload;
-                  if (onChunk) onChunk(payload);
-                }
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const payload = line.slice(6);
+            if (payload === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(payload);
+              const chunk = parsed.delta?.text || parsed.text || parsed.content || '';
+              if (chunk) {
+                fullText += chunk;
+                if (onChunk) onChunk(chunk);
+              }
+            } catch {
+              // 非 JSON 的 data 行，直接作为文本处理
+              if (payload && payload !== '[DONE]') {
+                fullText += payload;
+                if (onChunk) onChunk(payload);
               }
             }
           }
         }
-
-        this._semaphore.release();
-        return fullText;
-      } catch (e) {
-        lastError = e;
-        if (attempt < this.maxRetries) {
-          const delay = this.retryDelay * Math.pow(2, attempt);
-          console.warn(`[LLMClient] 流式调用第${attempt + 1}次重试...`, e.message);
-          await sleep(delay);
-        }
       }
-    }
 
-    this._semaphore.release();
-    throw new Error(`[LLMClient] 流式调用失败: ${lastError?.message}`);
+      releaseSemaphore();
+      return fullText;
+    } catch (e) {
+      releaseSemaphore();
+      throw new Error(`[LLMClient] 流式调用失败: ${e?.message}`);
+    }
   }
 }
