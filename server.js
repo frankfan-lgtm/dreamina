@@ -455,7 +455,7 @@ app.get("/api/simulation/stream", (req, res) => {
 
 // ─── 图片生成代理 (Seedream) ───
 app.post("/api/image", async (req, res) => {
-  const { prompt, apiKey, size } = req.body;
+  const { prompt, apiKey, size, imageModel } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ error: "缺少 prompt" });
@@ -468,7 +468,7 @@ app.post("/api/image", async (req, res) => {
   const url = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
 
   const requestBody = {
-    model: "doubao-seedream-5.0-lite",
+    model: imageModel || "doubao-seedream-5.0-lite",
     prompt,
     size: size || "2560x1440",
     response_format: "b64_json",
