@@ -468,7 +468,7 @@ app.post("/api/image", async (req, res) => {
   const url = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
 
   const requestBody = {
-    model: "doubao-seedream-4-5-251128",
+    model: "doubao-seedream-5.0-lite",
     prompt,
     size: size || "2560x1440",
     response_format: "b64_json",

@@ -15,7 +15,7 @@ function loadApiConfig() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
-  return { apiKey: "", baseUrl: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", model: "doubao-seed-2-0-pro-260215" };
+  return { apiKey: "94090db7-6585-460e-a8ff-7830c1516624", baseUrl: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", model: "doubao-seed-2-0-lite-260215" };
 }
 
 export function StoreProvider({ children }) {
