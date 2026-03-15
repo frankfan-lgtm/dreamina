@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Dreamina V2 — AI 通用多智能体世界模拟引擎</title>
+<style>
+  @page { size: A4; margin: 2cm 2.5cm; }
+  @media print {
+    body { font-size: 11pt; }
+    .page-break { page-break-before: always; }
+    h2 { page-break-after: avoid; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.8; color: #1a1a1a; max-width: 800px; margin: 0 auto;
+    padding: 40px 30px; background: #fff;
+  }
+  h1 { font-size: 28px; text-align: center; margin-bottom: 4px; color: #111; }
+  .subtitle { text-align: center; color: #666; font-size: 16px; margin-bottom: 40px; }
+  h2 { font-size: 20px; color: #1a1a1a; margin-top: 36px; margin-bottom: 16px;
+       padding-bottom: 8px; border-bottom: 2px solid #e8e8e8; }
+  h3 { font-size: 16px; color: #333; margin-top: 24px; margin-bottom: 10px; }
+  p { margin-bottom: 12px; font-size: 14px; }
+  strong { color: #111; }
+  ul, ol { margin-bottom: 12px; padding-left: 24px; font-size: 14px; }
+  li { margin-bottom: 6px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  th { background: #f5f5f5; font-weight: 600; text-align: left; }
+  th, td { border: 1px solid #ddd; padding: 8px 12px; }
+  pre { background: #f8f8f8; border: 1px solid #e8e8e8; border-radius: 4px;
+        padding: 16px; font-size: 12px; line-height: 1.6; overflow-x: auto;
+        margin: 16px 0; font-family: "SF Mono", "Fira Code", monospace; }
+  .highlight { background: #fffbe6; border-left: 4px solid #ffc107;
+               padding: 12px 16px; margin: 16px 0; font-size: 14px; }
+  .quote { color: #555; font-style: italic; font-size: 15px; text-align: center;
+           margin: 20px 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 16px 0; }
+  .card { background: #fafafa; border: 1px solid #eee; border-radius: 6px; padding: 16px; }
+  .card h4 { font-size: 14px; margin-bottom: 8px; color: #333; }
+  .card p, .card li { font-size: 13px; }
+  .tag { display: inline-block; background: #e8f4fd; color: #1a73e8; font-size: 12px;
+         padding: 2px 8px; border-radius: 3px; margin-right: 4px; }
+  .tag-green { background: #e6f4ea; color: #1e8e3e; }
+  .tag-orange { background: #fef3e2; color: #e67700; }
+  hr { border: none; border-top: 1px solid #eee; margin: 30px 0; }
+</style>
+</head>
+<body>
+
+<h1>Dreamina V2</h1>
+<p class="subtitle">AI 通用多智能体世界模拟引擎 &mdash; 设计理念与产品方案</p>
+
+<hr>
+
+<!-- ============== Section 1 ============== -->
+<h2>一、我们在做什么</h2>
+
+<div class="highlight">
+  <strong>一句话：</strong>用户描述一个世界，AI 自动生成角色和规则，每个角色作为独立智能体自主行动，故事从规则中自然涌现。<br><br>
+  不是 AI 写剧本，是 AI 演活人。
+</div>
+
+<p><strong>三大应用场景：</strong></p>
+<table>
+  <tr><th style="width:100px">场景</th><th>示例</th><th>用户价值</th></tr>
+  <tr><td>叙事模拟</td><td>哈利波特毕业后的故事、流浪地球三</td><td>以上帝/跟随视角看 AI 演绎的故事，可随时干预</td></tr>
+  <tr><td>群体预测</td><td>模拟股票市场多方博弈、球赛推演</td><td>多个"分析师 Agent"各自判断，涌现群体智慧</td></tr>
+  <tr><td>UGC 创作</td><td>用户自定义世界观和角色</td><td>新一代内容创作范式：不写剧本，设定规则看涌现</td></tr>
+</table>
+<p>三个场景用<strong>同一个引擎</strong>，差异只在配置。</p>
+
+<!-- ============== Section 2 ============== -->
+<h2 class="page-break">二、核心理念：蜂群涌现</h2>
+
+<h3>为什么不让 AI 写剧本？</h3>
+<div class="two-col">
+  <div class="card">
+    <h4>传统 AI 叙事</h4>
+    <p>一个 LLM 编写故事 = 本质上是<strong>一个人在写作</strong></p>
+  </div>
+  <div class="card">
+    <h4>Dreamina 的方案</h4>
+    <p>多个独立 AI Agent 各自行动 = 本质上是<strong>一个社会在运转</strong></p>
+  </div>
+</div>
+
+<p class="quote">"蜂群没有指挥官，却能建造精密的蜂巢。<br>人类社会没有编剧，却产生了无数精彩的故事。"</p>
+
+<p>原因只有两个：</p>
+<ol>
+  <li><strong>每个个体都有自己的目标</strong></li>
+  <li><strong>资源永远不够分</strong></li>
+</ol>
+<p>冲突、合作、背叛、牺牲——全部从这两个简单条件<strong>自然涌现</strong>。</p>
+
+<h3>V1 的问题：伪多智能体</h3>
+<p>V1 用一次 LLM 调用同时决定所有 NPC 的行为——本质上是一个大脑在控制所有角色。</p>
+<ul>
+  <li>LLM 作为统一意识，天然"读心"——NPC A 做决策时其实知道 NPC B 在想什么</li>
+  <li>信息不对称无法真正实现</li>
+  <li>每个 NPC 分到的思考深度被摊薄</li>
+</ul>
+
+<h3>V2 的核心升级：真多智能体</h3>
+<p><strong>每个 NPC = 一个独立的 AI Agent</strong>，拥有：</p>
+<ul>
+  <li>独立的 LLM 调用（自己的"大脑"）</li>
+  <li>独立的记忆系统（只记得自己经历的）</li>
+  <li>独立的视角（只看到自己能看到的）</li>
+  <li>独立的判断（可能是错的，可能被骗）</li>
+</ul>
+
+<!-- ============== Section 3 ============== -->
+<h2 class="page-break">三、行业调研：三大系统的对比与借鉴</h2>
+
+<h3>3.1 斯坦福小镇 <span style="font-weight:normal;color:#888">(Generative Agents, 2023)</span></h3>
+<p>斯坦福与 Google 合作的经典论文。25 个 AI Agent 在虚拟小镇中自主生活，涌现出情人节派对、竞选等社会行为。</p>
+<p><strong>核心机制：</strong></p>
+<ul>
+  <li>每个 Agent 独立运行，有自己的记忆流（Memory Stream）</li>
+  <li>记忆检索基于三因子：时间衰减 &times; 重要性 &times; 相关性</li>
+  <li>定期"反思"：从具体事件中归纳出抽象认知</li>
+  <li>层级规划：日计划 &rarr; 小时计划 &rarr; 分钟级行动</li>
+</ul>
+<p><span class="tag tag-green">借鉴</span> 记忆检索机制、反思机制</p>
+<p><span class="tag tag-orange">差异</span> Dreamina 有量化基因系统、双层关系（城府机制）、资源稀缺驱动</p>
+
+<h3>3.2 Mem0 记忆架构 <span style="font-weight:normal;color:#888">(2024-2025)</span></h3>
+<p>AI 记忆领域的前沿开源项目，在 LOCOMO 基准上比 OpenAI 内置记忆提升 26%。</p>
+<p><strong>核心机制：</strong></p>
+<ul>
+  <li>记忆写入不是简单追加，而是决策流水线：提取 &rarr; 比对 &rarr; ADD/UPDATE/DELETE/NOOP</li>
+  <li>矛盾检测：新旧信息冲突时 LLM 判断保留哪个</li>
+  <li>战略性遗忘：记太多是噪音污染，主动遗忘不重要的信息</li>
+</ul>
+<p><span class="tag tag-green">借鉴</span> 记忆写入流水线、矛盾检测、战略性遗忘</p>
+<p><span class="tag tag-orange">创新</span> 记忆能力受基因调制（不同性格的 NPC 记忆能力不同）</p>
+
+<h3>3.3 Claude Agent Teams <span style="font-weight:normal;color:#888">(Anthropic, 2025)</span></h3>
+<p>Anthropic 的多 Agent 协作框架。</p>
+<p><strong>核心机制：</strong></p>
+<ul>
+  <li>每个 Agent 是独立进程，拥有独立上下文窗口</li>
+  <li>Pull-based 任务认领：Agent 自主认领，非中央分配</li>
+  <li>异步邮箱通信：通过消息传递，没有共享内存</li>
+  <li>设计哲学：<strong>显式通信优于共享状态</strong></li>
+</ul>
+<p><span class="tag tag-green">借鉴</span> 独立 Agent 并行架构、异步通信机制</p>
+<p><span class="tag tag-orange">差异</span> Dreamina Agent 有持久记忆和人格，不是无状态工具</p>
+
+<h3>3.4 认知科学基础</h3>
+<table>
+  <tr><th>人类认知特征</th><th>Dreamina V2 对应设计</th></tr>
+  <tr><td>情景记忆 vs 语义记忆 (Tulving)</td><td>两层记忆：事件记录 + 归纳出的知识/信念</td></tr>
+  <tr><td>遗忘曲线 (Ebbinghaus)</td><td>指数衰减，重要性和情绪强度调制衰减速率</td></tr>
+  <tr><td>情绪增强记忆</td><td>情绪越强的事记得越牢，但细节可能不准确</td></tr>
+  <tr><td>记忆重构性</td><td>每次回忆受当前情绪和目标影响，不是完美回放</td></tr>
+  <tr><td>来源监控</td><td>追踪"亲眼看到" vs "听说的"，影响可信度</td></tr>
+  <tr><td>工作记忆容量限制 (Baddeley)</td><td>每次决策只能调用有限条相关记忆</td></tr>
+</table>
+
+<!-- ============== Section 4 ============== -->
+<h2 class="page-break">四、产品方案</h2>
+
+<h3>4.1 系统架构</h3>
+<pre>
+┌─ 用户层 ─────────────────────────────────────────┐
+│  上帝视角 &middot; 跟随视角 &middot; 天命控制台 &middot; 世界构建器   │
+└──────────────────┬───────────────────────────────┘
+                   │
+┌──────────────────▼───────────────────────────────┐
+│  导演系统：叙事合成 &middot; 信息差捕捉 &middot; 天命干预       │
+└──────────────────┬───────────────────────────────┘
+                   │
+┌──────────────────▼───────────────────────────────┐
+│  世界引擎：物理约束 &middot; 通信总线 &middot; 资源管理          │
+└──────────────────┬───────────────────────────────┘
+                   │
+┌──────────────────▼───────────────────────────────┐
+│  NPC Agent 层（每个 NPC 独立 LLM + 独立记忆）       │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐            │
+│  │NPC-A │ │NPC-B │ │NPC-C │ │ ...  │            │
+│  └──────┘ └──────┘ └──────┘ └──────┘            │
+└──────────────────┬───────────────────────────────┘
+                   │
+┌──────────────────▼───────────────────────────────┐
+│  认知记忆：情景记忆 &middot; 语义记忆 &middot; 遗忘 &middot; 反思      │
+└──────────────────┬───────────────────────────────┘
+                   │
+┌──────────────────▼───────────────────────────────┐
+│  感知适配器：虚拟世界 / 联网搜索 / 混合              │
+└──────────────────────────────────────────────────┘
+</pre>
+
+<h3>4.2 基因系统：量化灵魂</h3>
+<p>每个 NPC 的性格由 <strong>4 维基因向量</strong>定义（值域 0-1），不是文本标签。</p>
+<p>基因不仅决定<strong>行为倾向</strong>，还决定<strong>认知能力</strong>（V2 新增）：</p>
+<table>
+  <tr><th>基因</th><th>影响行为</th><th>影响认知（V2 新增）</th></tr>
+  <tr><td>逻辑天赋</td><td>分析问题的能力</td><td>记忆重要性评估的准确度</td></tr>
+  <tr><td>敏感度</td><td>情绪反应强度</td><td>情绪事件记得更牢，但细节可能失真</td></tr>
+  <tr><td>理性 vs 感性</td><td>决策偏好</td><td>回忆偏向还原事实 vs 强化情绪</td></tr>
+  <tr><td>风险偏好</td><td>冒险 vs 保守</td><td>高 = 容易忘失败教训，低 = 记仇</td></tr>
+  <tr><td>共情天赋</td><td>社交能力</td><td>高 = 记住情绪细节，低 = 只记事实</td></tr>
+</table>
+<p>同一事件，不同基因的 NPC 会<strong>记住不同的内容、以不同的速度遗忘、回忆时产生不同的扭曲</strong>。</p>
+
+<h3>4.3 认知记忆：像人一样记忆和遗忘</h3>
+<p><strong>两层记忆：</strong></p>
+<ul>
+  <li><strong>情景记忆</strong> —— 亲身经历的事件，带时间、地点、情绪、信息来源标签</li>
+  <li><strong>语义记忆</strong> —— 从经历中归纳出的知识和信念（如"李四不可靠"）</li>
+</ul>
+
+<p><strong>记忆写入</strong>不是简单追加，而是智能流水线：</p>
+<pre>新信息 → 提取关键事实 → 与已有记忆比对 → ADD / UPDATE / DELETE / NOOP</pre>
+
+<p><strong>战略性遗忘：</strong></p>
+<ul>
+  <li>不重要的事自然遗忘（Ebbinghaus 衰减）</li>
+  <li>情绪强烈的事记得更牢</li>
+  <li>反复回忆的事不容易忘</li>
+  <li>不同性格遗忘速度不同（大大咧咧的人会忘掉重要的事——这是合理的）</li>
+</ul>
+
+<div class="highlight">
+  <strong>同一事件三个视角：</strong><br><br>
+  客观事实：李四对张三撒谎说"项目没问题"<br>
+  张三记忆："李四说项目没问题"<br>
+  王五记忆："听到李四跟张三说没问题，但他表情不自然"<br>
+  李四记忆："我骗了张三"
+</div>
+
+<p><strong>记忆面板</strong>：用户可以看到每个 NPC 记住了什么、忘了什么。模拟过程透明可观察。</p>
+
+<h3>4.4 通信机制：真正的信息不对称</h3>
+<p>NPC 只能通过以下方式获取信息：</p>
+<ol>
+  <li><strong>感知</strong>（被动）—— 看到同地点的人在做什么</li>
+  <li><strong>对话</strong>（主动）—— 对方可能说真话、假话、或不说</li>
+  <li><strong>传闻</strong>（间接）—— 经过传递的信息可能失真</li>
+</ol>
+<p>对话是真正的交互——每句话是一次独立 LLM 调用，说话者不知道听者在想什么。有话继续聊，没话自然停止。</p>
+<p>资源争夺不由系统裁决，而是让 NPC 各自执行策略——谈判、抢占、求助、让步——策略本身就是涌现的一部分。</p>
+
+<h3 class="page-break">4.5 导演系统：上帝视角的叙事编辑</h3>
+<p>独立 Agent，拥有上帝视角，负责：</p>
+<ul>
+  <li>从多个 NPC 的行为中捕捉最有戏剧性的<strong>信息差和冲突</strong></li>
+  <li>合成<strong>图文交织</strong>的叙事流</li>
+  <li>主动制造"<strong>天命</strong>"事件推动剧情（用户可开关）</li>
+</ul>
+<p><strong>天命干预</strong>：当世界趋于平淡时注入突发事件——暴风雨、新角色出现、关键资源枯竭。类似真实世界的"黑天鹅事件"。</p>
+
+<h3>4.6 感知适配器：虚拟与现实的桥梁</h3>
+<p>核心问题：<strong>这个世界里的 NPC 能不能"上网"？</strong></p>
+<table>
+  <tr><th>模式</th><th>含义</th><th>场景</th></tr>
+  <tr><td>virtual</td><td>NPC 只感知虚拟世界内部信息</td><td>哈利波特、办公室模拟</td></tr>
+  <tr><td>realworld</td><td>NPC 可获取真实世界信息（联网搜索）</td><td>股票预测、球赛推演</td></tr>
+  <tr><td>hybrid</td><td>虚构世界观 + 真实信息</td><td>流浪地球（虚构 + 真实物理）</td></tr>
+</table>
+
+<h3>4.7 图片一致性 &amp; 流式体验</h3>
+<ul>
+  <li>每个角色创建时生成"定妆照"，每个场景生成"基准图"</li>
+  <li>后续图片通过<strong>图生图</strong>保持视觉一致性</li>
+  <li>文本通过 SSE 实时推送，图片异步生成后插入叙事流</li>
+  <li>用户感受：打开世界后，内容持续涌现，<strong>永远有新东西出现</strong></li>
+</ul>
+
+<!-- ============== Section 5 ============== -->
+<h2 class="page-break">五、为什么这个方向有价值</h2>
+
+<div class="two-col">
+  <div class="card">
+    <h4>对 AI 叙事</h4>
+    <p>现有工具（NovelAI、AI Dungeon）= 一个 LLM 写故事</p>
+    <p>Dreamina = 多个 Agent <strong>演</strong>故事</p>
+    <p>单 LLM 的故事是"编"出来的，多 Agent 涌现的故事是"长"出来的。后者的<strong>不可预测性和真实感</strong>是前者无法达到的。</p>
+  </div>
+  <div class="card">
+    <h4>对群体预测</h4>
+    <p>现有 AI = 一个模型给一个答案</p>
+    <p>Dreamina = 多个 Agent 各自分析<strong>博弈</strong></p>
+    <p>让"保守分析师"和"激进交易员"各自判断，结果比单一模型更接近真实市场的复杂性。</p>
+  </div>
+</div>
+
+<div class="highlight" style="margin-top:16px">
+  <h4 style="margin-bottom:8px">对 UGC 创作</h4>
+  <p style="margin:0">现有 UGC = 用户写内容。Dreamina = 用户设定规则，AI 演绎内容。</p>
+  <p style="margin:8px 0 0">这是内容创作的<strong>新范式</strong>：创作者不再是"写故事的人"，而是"<strong>造世界的人</strong>"。门槛更低，可能性更大。</p>
+</div>
+
+<!-- ============== Section 6 ============== -->
+<h2>六、实施节奏</h2>
+<table>
+  <tr><th style="width:80px">阶段</th><th>内容</th><th>里程碑</th></tr>
+  <tr><td>Phase 1</td><td>引擎核心重构：独立 Agent + 认知记忆 + 通信总线</td><td>7 NPC 独立运行，可观察记忆变化</td></tr>
+  <tr><td>Phase 2</td><td>导演系统 + 天命干预 + 多视角叙事</td><td>用户可切换上帝/跟随视角</td></tr>
+  <tr><td>Phase 3</td><td>图片一致性系统 + 流式体验</td><td>图文交织的沉浸式体验</td></tr>
+  <tr><td>Phase 4</td><td>感知适配器 + 预测场景</td><td>支持联网搜索、股票/球赛预测</td></tr>
+  <tr><td>Phase 5</td><td>UGC 开放 + 世界模板市场</td><td>用户可创建和分享自己的世界</td></tr>
+</table>
+
+</body>
+</html>
