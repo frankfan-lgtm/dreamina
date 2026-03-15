@@ -9,13 +9,24 @@ const StoreContext = createContext(null);
 // 本地存储 key
 const STORAGE_KEY = "dreamina_api_config";
 
-// 读取已保存的 API 配置
+// 写死的默认配置
+const DEFAULT_CONFIG = {
+  apiKey: "94090db7-6585-460e-a8ff-7830c1516624",
+  baseUrl: "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+  model: "doubao-seed-2-0-lite-260215",
+};
+
+// 读取 API 配置 — key和地址写死，只允许改模型名称
 function loadApiConfig() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      // 只取模型名称，key和地址用写死的
+      return { ...DEFAULT_CONFIG, model: saved.model || DEFAULT_CONFIG.model };
+    }
   } catch {}
-  return { apiKey: "94090db7-6585-460e-a8ff-7830c1516624", baseUrl: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", model: "doubao-seed-2-0-lite-260215" };
+  return { ...DEFAULT_CONFIG };
 }
 
 export function StoreProvider({ children }) {
