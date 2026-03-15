@@ -151,7 +151,7 @@ ${relatedSemantic.length > 0 ? relatedSemantic.map((m, i) => `[${i}] id=${m.id}:
 
     try {
       const raw = await llmClient.call(systemPrompt, userPrompt);
-      const decision = JSON.parse(raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim());
+      const decision = this._safeParseJSON(raw);
 
       // 3. 执行情景记忆操作
       let episodicResult = null;
@@ -502,6 +502,45 @@ ${existingBeliefs}
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  私有方法
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  /**
+   * 安全解析 JSON — 容忍 LLM 返回的非标准 JSON
+   * 去除 markdown 代码块、修复尾逗号、提取 JSON 对象/数组
+   */
+  _safeParseJSON(text) {
+    let cleaned = text.trim();
+
+    // 去掉 markdown 代码块包裹
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+
+    // 如果不以 { 或 [ 开头，尝试提取第一个 JSON 对象/数组
+    if (!cleaned.startsWith('{') && !cleaned.startsWith('[')) {
+      const startObj = cleaned.indexOf('{');
+      const startArr = cleaned.indexOf('[');
+      const start = startObj >= 0 && startArr >= 0
+        ? Math.min(startObj, startArr)
+        : Math.max(startObj, startArr);
+      if (start >= 0) cleaned = cleaned.slice(start);
+    }
+
+    // 如果不以 } 或 ] 结尾，截断到最后一个匹配字符
+    const lastBrace = cleaned.lastIndexOf('}');
+    const lastBracket = cleaned.lastIndexOf(']');
+    const lastClose = Math.max(lastBrace, lastBracket);
+    if (lastClose >= 0 && cleaned.length - 1 !== lastClose) {
+      cleaned = cleaned.slice(0, lastClose + 1);
+    }
+
+    try {
+      return JSON.parse(cleaned);
+    } catch (_e) {
+      // 尝试修复常见问题：尾逗号
+      const fixed = cleaned.replace(/,\s*([}\]])/g, '$1');
+      return JSON.parse(fixed);
+    }
+  }
 
   /**
    * 计算记忆的 retention（保留率）
