@@ -3,7 +3,8 @@
  */
 import React, { useState } from "react";
 import { useStore } from "../../store/useStore.jsx";
-import { WORLD_PRESETS, generateWorld } from "../../sdk/index.js";
+import { WORLD_PRESETS } from "../../sdk/index.js";
+import { WorldAnalyst } from "../../agents/index.js";
 
 // 预设列表（从 SDK 加载 + 预留更多）
 const PRESET_LIST = [
@@ -72,7 +73,7 @@ export default function CreateWorld() {
     }
   };
 
-  // AI 分析世界
+  // V2: AI 世界分析师分析世界
   const handleAnalyze = async () => {
     if (!worldPrompt.trim()) return;
     if (!apiConfig.apiKey) {
@@ -85,30 +86,29 @@ export default function CreateWorld() {
     setError("");
 
     try {
-      const worldData = await generateWorld(worldPrompt, apiConfig);
+      const analyst = new WorldAnalyst(apiConfig, { maxRetries: 2, timeout: 60000 });
+      const analysis = await analyst.analyze(worldPrompt);
 
-      setWorldConfig(worldData.config);
-      setNpcs(worldData.npcs.map((npc) => ({
-        ...npc,
-        action: "", thought: "", decisionChain: "",
-        relationships: worldData.relationships[npc.id] || {},
-      })));
-      setRelationships(worldData.relationships);
-      setSchedule(worldData.schedule || []);
-      setSelectedPreset(null);
-
-      // 分析结果
+      // 存储 V2 分析结果（含完整蓝图数据，供 WorldArchitect 使用）
       setWorldAnalysis({
-        worldType: "narrative",
-        perception: "virtual",
-        npcCount: worldData.npcs.length,
-        name: worldData.config.name,
-        description: worldData.config.description,
-        npcs: worldData.npcs.map((n) => ({ id: n.id, name: n.name, emoji: n.emoji, title: n.title })),
-        resources: worldData.config.resources,
-        conflicts: worldData.config.interventions?.slice(0, 3).map((i) => i.description) || [],
+        ...analysis,
+        // 兼容字段
+        worldType: analysis.type,
+        perception: analysis.perception,
+        npcCount: analysis.complexity.suggestedNpcCount,
+        name: analysis.worldName,
+        description: analysis.worldDescription,
+        npcs: [], // NPC 将由 WorldArchitect 在构建阶段生成
+        resources: analysis.suggestedResources.reduce((acc, r) => {
+          acc[r.id] = r;
+          return acc;
+        }, {}),
+        conflicts: analysis.keyConflicts.map((c) => c.description),
+        // V2 特有：标记需要构建阶段调用 WorldArchitect
+        _needsBuild: true,
       });
 
+      setSelectedPreset(null);
       setCurrentPage("analysis");
     } catch (e) {
       setError(e.message);
