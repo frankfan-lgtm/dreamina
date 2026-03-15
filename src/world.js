@@ -59,6 +59,7 @@ export const NPCS = [
     title: "即梦业务负责人",
     age: 38,
     emoji: "👩‍💼",
+    gender: "female",
     region: "boss",
     background: "字节跳动即梦(Dreamina)业务负责人。大女主人设，理想主义者，思维浪漫。梦想是做出一个想象力世界平台，让人们都能在想象里游玩。INFP，用直觉和价值观驱动决策，对团队有极高的期待和信任。",
     gene: {
@@ -101,6 +102,7 @@ export const NPCS = [
     title: "即梦Agent业务负责人 / Team Leader",
     age: 29,
     emoji: "🌲",
+    gender: "male",
     region: "desk",
     background: "97年生，Kelly的直接下属(Kelly-1)，Frank和Benzema的团队Leader。年少有为，年入大几百万。加入即梦仅2个月，之前在OPPO，再之前创过业当过CTO。脑子快智商高，同时兼顾技术和业务。INFP/INTP切换，内心细腻但思维极其理性。",
     gene: {
@@ -143,6 +145,7 @@ export const NPCS = [
     title: "即梦产品经理",
     age: 30,
     emoji: "📸",
+    gender: "male",
     region: "desk",
     background: "95年生，即梦最早的产品经理之一，加入团队2年半。爱好摄影、旅行，喜欢研究穿搭，开小米YU7。思维活跃且理想主义，ENFP/ENTP切换。对创作工具有很深的理解和热情，是团队的创意发动机。",
     gene: {
@@ -168,7 +171,7 @@ export const NPCS = [
     skills: { 产品设计: 8, 用户研究: 8, 创意发想: 9, 沟通: 8, 摄影: 9, 数据分析: 5, 演讲: 6 },
     state: { mood: "兴奋", moodValue: 78, pressure: 55, energy: 85, salary: 35000, performance: "A" },
     goals: {
-      生存: { priority: 2, satisfaction: 70, desc: "开着YU7，生活还行" },
+      生存: { priority: 1, satisfaction: 70, desc: "开着YU7，生活还行" },
       安全: { priority: 2, satisfaction: 65, desc: "团队核心成员，不太担心" },
       社交: { priority: 4, satisfaction: 80, desc: "喜欢和大家交流想法" },
       地位: { priority: 3, satisfaction: 50, desc: "想做出标杆级的AI创作产品" },
@@ -185,6 +188,7 @@ export const NPCS = [
     title: "即梦产品经理",
     age: 26,
     emoji: "💹",
+    gender: "male",
     region: "desk",
     background: "99年生，纯血ENTP。加入团队1年半。性格直率，感染力强。计算机专业出身，很聪明务实，动手能力强。喜欢研究股票，一心搞钱。对技术有深入理解，能和工程师无缝沟通。",
     gene: {
@@ -210,11 +214,11 @@ export const NPCS = [
     skills: { 产品设计: 7, 编程: 7, 数据分析: 8, 沟通: 7, 投资理财: 8, 技术理解: 9, 项目管理: 6 },
     state: { mood: "务实", moodValue: 70, pressure: 50, energy: 80, salary: 28000, performance: "B" },
     goals: {
-      生存: { priority: 4, satisfaction: 60, desc: "想赚更多钱" },
-      安全: { priority: 3, satisfaction: 70, desc: "能力摆在这，不太担心" },
+      生存: { priority: 1, satisfaction: 60, desc: "想赚更多钱" },
+      安全: { priority: 2, satisfaction: 70, desc: "能力摆在这，不太担心" },
       社交: { priority: 3, satisfaction: 70, desc: "和同事关系不错" },
-      地位: { priority: 3, satisfaction: 45, desc: "想证明技术型PM的价值" },
-      自我实现: { priority: 4, satisfaction: 50, desc: "做出有商业价值的产品" },
+      地位: { priority: 4, satisfaction: 45, desc: "想证明技术型PM的价值" },
+      自我实现: { priority: 5, satisfaction: 50, desc: "做出有商业价值的产品" },
     },
     memories: { short: [], medium: [], long: ["计算机科班出身，技术是最大优势", "炒股让他学会了风险评估和快速决策"] },
     relationships: {},
@@ -227,6 +231,7 @@ export const NPCS = [
     title: "即梦产品经理",
     age: 26,
     emoji: "🔥",
+    gender: "female",
     region: "desk",
     background: "00年生，ESTJ。加入即梦半年。性格直爽，女汉子人设。年轻有冲劲，对局势掌控力和影响力强。做事雷厉风行，执行力极强。",
     gene: {
@@ -269,6 +274,7 @@ export const NPCS = [
     title: "即梦产品经理",
     age: 31,
     emoji: "👶",
+    gender: "male",
     region: "desk",
     background: "95年生，INTP。加入即梦一年多。奶爸，法学专业出身。逻辑思维极好，分析问题有独特的法律视角。做事稳重，不急不躁。",
     gene: {
@@ -311,6 +317,7 @@ export const NPCS = [
     title: "即梦产品经理",
     age: 29,
     emoji: "🌙",
+    gender: "female",
     region: "desk",
     background: "97年生，INTP。产品经理，加入团队1年。安静但有深度，思考问题很透彻。不争不抢但总能给出精准的判断。",
     gene: {

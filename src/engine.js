@@ -221,9 +221,9 @@ export function buildPrompt(world, npcs, gameTime, intervention) {
 }
 
 /**
- * 调用 API
+ * 私有辅助：统一的 LLM fetch / 错误处理 / 响应解析
  */
-export async function callAPI(apiConfig, systemPrompt, userPrompt) {
+async function fetchLLM(apiConfig, systemPrompt, messages) {
   let res;
   try {
     res = await fetch("/api/claude", {
@@ -231,7 +231,7 @@ export async function callAPI(apiConfig, systemPrompt, userPrompt) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         systemPrompt,
-        userPrompt,
+        messages,
         apiKey: apiConfig.apiKey,
         baseUrl: apiConfig.baseUrl,
         model: apiConfig.model,
@@ -251,6 +251,13 @@ export async function callAPI(apiConfig, systemPrompt, userPrompt) {
   const data = await res.json();
   if (!data.text) throw new Error("返回内容为空");
   return data.text;
+}
+
+/**
+ * 调用 API
+ */
+export async function callAPI(apiConfig, systemPrompt, userPrompt) {
+  return fetchLLM(apiConfig, systemPrompt, [{ role: "user", content: userPrompt }]);
 }
 
 /**
@@ -278,7 +285,7 @@ export function parseResponse(text) {
     // 尝试修复常见问题：多余逗号（trailing commas）
     const fixed = cleaned
       .replace(/,\s*([}\]])/g, "$1")           // 去掉尾逗号
-      .replace(/(['"])?(\w+)(['"])?\s*:/g, '"$2":') // 补全属性名引号
+      .replace(/(?<=[{,]\s*)(\w+)\s*:/g, '"$1":') // 补全属性名引号
       .replace(/:\s*'([^']*)'/g, ': "$1"');     // 单引号值转双引号
     try {
       return JSON.parse(fixed);
@@ -440,31 +447,7 @@ ${npc.thought ? '内心想法：' + npc.thought : ''}
   messages.push({ role: "user", content: userMessage });
 
   // 调用API（使用messages格式）
-  let res;
-  try {
-    res = await fetch("/api/claude", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemPrompt,
-        messages,
-        apiKey: apiConfig.apiKey,
-        baseUrl: apiConfig.baseUrl,
-        model: apiConfig.model,
-      }),
-    });
-  } catch (e) {
-    throw new Error("无法连接到服务器");
-  }
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`API错误 (${res.status}): ${err}`);
-  }
-
-  const data = await res.json();
-  if (!data.text) throw new Error("返回内容为空");
-  return data.text;
+  return fetchLLM(apiConfig, systemPrompt, messages);
 }
 
 function clamp(val, min, max) {
@@ -507,14 +490,19 @@ Rules:
  * 调用图片生成 API
  */
 export async function generateSceneImage(apiConfig, prompt) {
-  const res = await fetch("/api/image", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      prompt,
-      apiKey: apiConfig.apiKey,
-    }),
-  });
+  let res;
+  try {
+    res = await fetch("/api/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        apiKey: apiConfig.apiKey,
+      }),
+    });
+  } catch (e) {
+    throw new Error("图片服务连接失败: " + e.message);
+  }
 
   if (!res.ok) {
     const err = await res.text();

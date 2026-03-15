@@ -86,7 +86,7 @@ export const HOGWARTS_NPCS = [
       安全: { priority: 4, satisfaction: 35, desc: "霍格沃茨不再安全" },
       社交: { priority: 3, satisfaction: 65, desc: "有罗恩和赫敏，但感觉自己在把他们拖入危险" },
       地位: { priority: 1, satisfaction: 30, desc: "不想当'救世之星'，但没得选" },
-      自我实现: { priority: 4, satisfaction: 45, desc: "保护所有人，终结伏地魔" },
+      自我实现: { priority: 2, satisfaction: 45, desc: "保护所有人，终结伏地魔" },
     },
     memories: { short: [], medium: [], long: ["父母为保护自己而死，这份爱是最强大的魔法", "在墓地亲眼看到伏地魔复活，没有人相信自己", "预言说'非此即彼，必有一亡'"] },
     relationships: {},

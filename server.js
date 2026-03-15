@@ -30,6 +30,17 @@ app.post("/api/claude", async (req, res) => {
   }
 
   const url = baseUrl || process.env.API_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+
+  const ALLOWED_HOSTS = ["ark.cn-beijing.volces.com", "api.openai.com", "api.anthropic.com", "api.deepseek.com"];
+  try {
+    const urlObj = new URL(url);
+    if (!ALLOWED_HOSTS.some(h => urlObj.hostname === h || urlObj.hostname.endsWith("." + h))) {
+      return res.status(400).json({ error: "不支持的 API 地址" });
+    }
+  } catch {
+    return res.status(400).json({ error: "无效的 API 地址" });
+  }
+
   const modelId = model || process.env.API_MODEL || "deepseek-v3-2-251201";
 
   if (!modelId) {
@@ -63,6 +74,7 @@ app.post("/api/claude", async (req, res) => {
         max_tokens: 4096,
         temperature: 0.8,
       }),
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!response.ok) {
@@ -83,7 +95,7 @@ app.post("/api/claude", async (req, res) => {
     res.json({ text });
   } catch (err) {
     console.error("请求失败:", err.message);
-    res.status(500).json({ error: `请求失败: ${err.message}` });
+    return res.status(500).json({ error: `请求失败: ${err.message}` });
   }
 });
 
@@ -96,6 +108,9 @@ app.post("/api/image", async (req, res) => {
   }
 
   const key = apiKey || process.env.API_KEY;
+  if (!key) {
+    return res.status(400).json({ error: "缺少 API Key，请在界面设置中输入或设置环境变量 API_KEY" });
+  }
   const url = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
 
   const requestBody = {
@@ -115,6 +130,7 @@ app.post("/api/image", async (req, res) => {
         "Authorization": `Bearer ${key}`,
       },
       body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!response.ok) {
@@ -140,7 +156,7 @@ app.post("/api/image", async (req, res) => {
     }
   } catch (err) {
     console.error("[图片API] 请求失败:", err.message);
-    res.status(500).json({ error: `图片请求失败: ${err.message}` });
+    return res.status(500).json({ error: `图片请求失败: ${err.message}` });
   }
 });
 
