@@ -86,7 +86,11 @@ export class ResourceManager {
    */
   initResources(resources) {
     this._resources.clear();
-    for (const res of resources) {
+    // 兼容object和array两种格式
+    const resList = Array.isArray(resources)
+      ? resources
+      : Object.entries(resources).map(([id, res]) => ({ id, ...res }));
+    for (const res of resList) {
       this._resources.set(res.id, {
         id: res.id,
         name: res.name || res.id,

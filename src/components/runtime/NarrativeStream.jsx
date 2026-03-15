@@ -50,7 +50,7 @@ function NarrativeEntry({ entry, npcs }) {
               </>
             )}
           </div>
-          <div className="narrative-dialogue-content">{entry.text}</div>
+          <div className="narrative-dialogue-content">{entry.text || entry.content}</div>
           {entry.subtext && (
             <div className="narrative-dialogue-subtext">
               &#128173; {entry.subtext}
@@ -63,7 +63,7 @@ function NarrativeEntry({ entry, npcs }) {
       return (
         <div className="narrative-info-gap-card">
           <div className="narrative-info-gap-badge">&#128064; 信息差</div>
-          <div className="narrative-info-gap-text">{entry.text}</div>
+          <div className="narrative-info-gap-text">{entry.text || entry.description}</div>
           {entry.details && (
             <div className="narrative-info-gap-details">{entry.details}</div>
           )}

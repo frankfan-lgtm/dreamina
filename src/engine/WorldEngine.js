@@ -119,7 +119,7 @@ export class WorldEngine {
     /** @type {Map<string, string>} NPC ID -> 当前地点ID */
     this._npcLocations = new Map();
     for (const npc of npcs) {
-      this._npcLocations.set(npc.id, npc.location || 'default');
+      this._npcLocations.set(npc.id, npc.location || npc.region || 'default');
     }
 
     /** @type {Map<string, object>} 地点ID -> 地点信息 */
@@ -131,7 +131,7 @@ export class WorldEngine {
     }
 
     // ---- 关系图 ----
-    this._relationships = relationships;
+    this._relationships = this._normalizeRelationships(relationships);
 
     // ---- Tick调度器 ----
     this._scheduler = new TickScheduler(worldConfig.time || {});
@@ -176,6 +176,27 @@ export class WorldEngine {
       // 发射tick完成事件
       this._emitter.emit('tick:after', { gameTime, decisions });
     });
+  }
+
+  /**
+   * 检测并转换关系格式
+   * 兼容嵌套格式 { npcId: { otherId: { inner, outer, notes } } }
+   * 和箭头键格式 { "npcId->otherId": {...} }
+   */
+  _normalizeRelationships(rawRelationships) {
+    const normalized = {};
+    for (const [fromId, targets] of Object.entries(rawRelationships)) {
+      if (typeof targets === 'object' && !targets.type && !targets.strength) {
+        // 嵌套格式: { npcId: { otherId: { inner, outer, notes } } }
+        for (const [toId, rel] of Object.entries(targets)) {
+          normalized[`${fromId}->${toId}`] = rel;
+        }
+      } else {
+        // 已经是扁平格式
+        normalized[fromId] = targets;
+      }
+    }
+    return normalized;
   }
 
   /**
