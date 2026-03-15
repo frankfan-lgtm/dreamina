@@ -130,10 +130,14 @@ export class NPCAgent {
     // 6. 更新自身状态
     this.currentAction = decision.action ?? null;
     this.currentThought = decision.thought ?? null;
+    this._lastAction = this.currentAction;
+    this._lastThought = this.currentThought;
+    this._lastDecisionChain = decision.decisionChain ?? "";
     this._applyDecisionToState(decision);
 
     // 7. 返回标准格式的行动结果
     return {
+      id: this.data.id,
       action: decision.action ?? "继续当前活动",
       movement: decision.movement ?? null,
       speech: decision.speech ?? null,
@@ -498,10 +502,24 @@ ${memoryText}
       // 关系网
       relationships: this.data.relationships,
 
+      // 性格
+      personality: this.data.personality,
+
+      // 当前行动/思考（兼容字段名）
+      action: this.currentAction,
+      thought: this.currentThought,
+
+      // 决策链
+      decisionChain: this._lastDecisionChain,
+
       // 记忆面板数据
       memories: {
         episodic: memAll.episodic.sort((a, b) => b.timestamp - a.timestamp),
         semantic: memAll.semantic.sort((a, b) => b.confidence - a.confidence),
+        // 兼容V1格式
+        long: memAll.semantic?.map(s => s.belief) || [],
+        medium: memAll.episodic?.filter(e => e.importance > 0.5).map(e => e.content) || [],
+        short: memAll.episodic?.slice(-5).map(e => e.content) || [],
         stats: {
           episodicCount: memAll.episodic.length,
           episodicCapacity: 100,

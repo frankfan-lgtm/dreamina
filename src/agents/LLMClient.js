@@ -116,6 +116,13 @@ export class LLMClient {
    */
   async _fetch(systemPrompt, messages) {
     await this._semaphore.acquire();
+    let released = false;
+    const releaseSemaphore = () => {
+      if (!released) {
+        released = true;
+        this._semaphore.release();
+      }
+    };
 
     let lastError;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
@@ -144,7 +151,7 @@ export class LLMClient {
           if (res.status === 429 || res.status >= 500) {
             throw new Error(`API错误 (${res.status}): ${errText}`);
           }
-          this._semaphore.release();
+          releaseSemaphore();
           throw new Error(`API错误 (${res.status}): ${errText}`);
         }
 
@@ -153,13 +160,13 @@ export class LLMClient {
           throw new Error('API返回内容为空');
         }
 
-        this._semaphore.release();
+        releaseSemaphore();
         return data.text;
       } catch (e) {
         lastError = e;
-        // 不可重试的错误直接抛出
-        if (e.message && e.message.includes('API错误') && !e.message.includes('429') && !e.message.includes('5')) {
-          this._semaphore.release();
+        // 不可重试的错误直接抛出（检查具体HTTP状态码）
+        if (e.message && e.message.includes('API错误') && !e.message.includes('429') && !/\b5\d{2}\b/.test(e.message)) {
+          releaseSemaphore();
           throw e;
         }
         // 还有重试次数，等待后重试
@@ -171,7 +178,7 @@ export class LLMClient {
       }
     }
 
-    this._semaphore.release();
+    releaseSemaphore();
     throw new Error(`[LLMClient] ${this.maxRetries + 1}次调用均失败: ${lastError?.message}`);
   }
 

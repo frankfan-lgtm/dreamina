@@ -14,3 +14,4 @@ export { LLMClient } from './LLMClient.js';
 export { WorldAnalyst } from './WorldAnalyst.js';
 export { WorldArchitect } from './WorldArchitect.js';
 export { Director } from './Director.js';
+export { NPCAgent } from './NPCAgent.js';
