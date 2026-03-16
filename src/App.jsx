@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { WORLD_CONFIG, NPCS, INITIAL_RELATIONSHIPS, SCHEDULE_TEMPLATE, NPC_STATIONS } from "./world.js";
 import { simulateTick, applyResult, chatWithNPC, generateImagePrompt, generateSceneImage } from "./engine.js";
 import { WORLD_PRESETS, generateWorld, autoAssignSprites } from "./sdk/index.js";
+import BrainstormScreen from "./BrainstormScreen.jsx";
 
 // ─── 工具函数 ───
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -2539,7 +2540,7 @@ function SimulationScreen({ apiConfig, onSettings, worldPack, onBack }) {
 }
 
 // ─── 世界选择页 ───
-function WorldSelectScreen({ onSelect, onCreateNew, apiConfig }) {
+function WorldSelectScreen({ onSelect, onCreateNew, onBrainstorm, apiConfig }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [userPrompt, setUserPrompt] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -2649,13 +2650,29 @@ function WorldSelectScreen({ onSelect, onCreateNew, apiConfig }) {
           )}
         </div>
       )}
+      {/* 创意脑爆入口 */}
+      <div className="mt-6">
+        <button onClick={onBrainstorm}
+          className="cursor-pointer transition-all"
+          style={{
+            background:'rgba(255,107,107,0.08)', border:'2px dashed rgba(255,107,107,0.3)',
+            borderRadius:8, padding:'16px 32px', color:'#ff6b6b', fontSize:14,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b6b'; e.currentTarget.style.background = 'rgba(255,107,107,0.12)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)'; e.currentTarget.style.background = 'rgba(255,107,107,0.08)'; }}>
+          🧠 创意脑爆 — 多Agent vs 单Agent 创意对决
+        </button>
+        <div className="text-xs mt-2 text-center" style={{color:'#9ca3af'}}>
+          多个AI创意人围绕你的想法展开脑爆，验证多Agent是否能产出更好的创意
+        </div>
+      </div>
     </div>
   );
 }
 
 // ─── App Root ───
 export default function App() {
-  const [phase, setPhase] = useState("select"); // select → sim → setup
+  const [phase, setPhase] = useState("select"); // select → sim → setup → brainstorm
   const [selectedWorld, setSelectedWorld] = useState(null);
   const [apiConfig, setApiConfig] = useState(() => {
     try {
@@ -2683,9 +2700,17 @@ export default function App() {
     return <ApiSetupScreen config={apiConfig} onSave={handleSaveConfig} />;
   }
 
+  if (phase === "brainstorm") {
+    return <BrainstormScreen
+      apiConfig={apiConfig}
+      onBack={() => setPhase("select")}
+    />;
+  }
+
   if (phase === "select" || !selectedWorld) {
     return <WorldSelectScreen
       onSelect={handleSelectWorld}
+      onBrainstorm={() => setPhase("brainstorm")}
       apiConfig={apiConfig}
     />;
   }

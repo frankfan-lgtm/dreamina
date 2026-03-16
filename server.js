@@ -99,6 +99,62 @@ app.post("/api/claude", async (req, res) => {
   }
 });
 
+// ─── VLM 图片理解代理 (Doubao-Seed-2.0-lite) ───
+app.post("/api/vlm", async (req, res) => {
+  const { systemPrompt, messages, apiKey } = req.body;
+
+  if (!systemPrompt || !messages) {
+    return res.status(400).json({ error: "缺少 systemPrompt 或 messages" });
+  }
+
+  const key = apiKey || process.env.API_KEY;
+  if (!key) {
+    return res.status(400).json({ error: "缺少 API Key" });
+  }
+
+  const url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+  const modelId = "Doubao-Seed-2.0-lite";
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages,
+        ],
+        max_tokens: 2048,
+        temperature: 0.3,
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("[VLM API] 错误:", response.status, err.slice(0, 500));
+      return res.status(response.status).json({
+        error: `VLM调用失败 (${response.status}): ${err.slice(0, 200)}`,
+      });
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) {
+      return res.status(500).json({ error: "VLM返回内容为空" });
+    }
+
+    res.json({ text });
+  } catch (err) {
+    console.error("[VLM API] 请求失败:", err.message);
+    return res.status(500).json({ error: `VLM请求失败: ${err.message}` });
+  }
+});
+
 // ─── 图片生成代理 (Seedream) ───
 app.post("/api/image", async (req, res) => {
   const { prompt, apiKey, size } = req.body;
