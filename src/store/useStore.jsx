@@ -18,14 +18,21 @@ const DEFAULT_CONFIG = {
 
 // 读取 API 配置 — key和地址写死，只允许改模型名称
 function loadApiConfig() {
+  // 清除旧的错误缓存
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const saved = JSON.parse(raw);
-      // 只取模型名称，key和地址用写死的
+      // 如果缓存的模型名看起来像 API key，清掉
+      if (saved.model && saved.model.startsWith("api-key")) {
+        localStorage.removeItem(STORAGE_KEY);
+        return { ...DEFAULT_CONFIG };
+      }
       return { ...DEFAULT_CONFIG, model: saved.model || DEFAULT_CONFIG.model };
     }
-  } catch {}
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+  }
   return { ...DEFAULT_CONFIG };
 }
 
