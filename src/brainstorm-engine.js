@@ -56,23 +56,15 @@ async function fetchImage(apiConfig, prompt) {
 }
 
 // VLM 调用 — 用 Doubao-Seed-2.0-lite 理解图片
+// 图片通过 /api/vlm 端点在服务端处理，避免 base64 数据通过客户端传输超过 body 限制
 async function fetchVLM(apiConfig, systemPrompt, textContent, imageUrl) {
-  const userContent = [
-    { type: "text", text: textContent },
-  ];
-  if (imageUrl) {
-    userContent.push({
-      type: "image_url",
-      image_url: { url: imageUrl },
-    });
-  }
-
   const res = await fetch("/api/vlm", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       systemPrompt,
-      messages: [{ role: "user", content: userContent }],
+      textContent,
+      imageUrl,
       apiKey: apiConfig.apiKey,
     }),
   });
@@ -208,28 +200,36 @@ export async function brainstormRound(intent, personas, history, apiConfig, onMe
     // 构建对话历史
     const chatMessages = [];
 
-    // 将历史转为LLM对话格式
-    for (const msg of history) {
+    // 将所有历史 + 本轮已发言的消息合并为对话格式
+    // 用单条 user 消息包含所有其他人发言，避免连续同角色消息违反API规范
+    const allMsgs = [...history, ...roundMessages];
+    let pendingOthers = [];
+
+    const flushOthers = () => {
+      if (pendingOthers.length > 0) {
+        chatMessages.push({ role: "user", content: pendingOthers.join("\n\n") });
+        pendingOthers = [];
+      }
+    };
+
+    for (const msg of allMsgs) {
       if (msg.agent === persona.name) {
+        flushOthers();
         chatMessages.push({
           role: "assistant",
           content: JSON.stringify({ message: msg.message, imageRequest: null }),
         });
       } else {
-        const content = msg.imageUrl
-          ? `${msg.agentEmoji} ${msg.agent}：${msg.message}\n[生成了一张图片]`
-          : `${msg.agentEmoji} ${msg.agent}：${msg.message}`;
-        chatMessages.push({ role: "user", content });
+        let content = `${msg.agentEmoji} ${msg.agent}：${msg.message}`;
+        if (msg.imageDescription) {
+          content += `\n[概念图描述: ${msg.imageDescription}]`;
+        } else if (msg.imageUrl) {
+          content += `\n[生成了一张概念图]`;
+        }
+        pendingOthers.push(content);
       }
     }
-
-    // 加上本轮已发言的agent
-    for (const msg of roundMessages) {
-      const content = msg.imageUrl
-        ? `${msg.agentEmoji} ${msg.agent}：${msg.message}\n[生成了一张图片]`
-        : `${msg.agentEmoji} ${msg.agent}：${msg.message}`;
-      chatMessages.push({ role: "user", content });
-    }
+    flushOthers();
 
     // 如果没有任何历史，加一个开场引导
     if (chatMessages.length === 0) {
@@ -263,10 +263,10 @@ export async function brainstormRound(intent, personas, history, apiConfig, onMe
       imageUrl: null,
     };
 
-    // 如果有图片请求，生成图片
+    // 如果有图片请求，先通知UI（generating状态），再生成图片
     if (parsed.imageRequest) {
+      onMessage && onMessage({ ...msg, imageStatus: "generating" });
       try {
-        onMessage && onMessage({ ...msg, imageStatus: "generating" });
         const imageUrl = await fetchImage(apiConfig, parsed.imageRequest);
         msg.imageUrl = imageUrl;
 
@@ -285,10 +285,13 @@ export async function brainstormRound(intent, personas, history, apiConfig, onMe
       } catch (e) {
         msg.imageError = e.message;
       }
+      // 更新之前的generating消息（用 imageUpdate 事件替换）
+      onMessage && onMessage({ ...msg, imageStatus: "done" });
+    } else {
+      onMessage && onMessage(msg);
     }
 
     roundMessages.push(msg);
-    onMessage && onMessage(msg);
   }
 
   return roundMessages;
@@ -325,7 +328,11 @@ ${conversationText}
 请判断是否需要继续讨论。`;
 
   const raw = await fetchLLM(apiConfig, systemPrompt, [{ role: "user", content: userPrompt }]);
-  return parseJSON(raw);
+  try {
+    return parseJSON(raw);
+  } catch {
+    return { shouldContinue: true, progressSummary: "主持人判断解析失败，继续讨论", reason: "解析错误" };
+  }
 }
 
 // ─── 5. 最终方案整合 ───
@@ -365,7 +372,12 @@ ${conversationText}
 请整合出最终创意方案。`;
 
   const raw = await fetchLLM(apiConfig, systemPrompt, [{ role: "user", content: userPrompt }]);
-  const result = parseJSON(raw);
+  let result;
+  try {
+    result = parseJSON(raw);
+  } catch {
+    result = { title: "创意方案", concept: "", detail: raw, highlights: [], imagePrompt: null };
+  }
 
   // 生成最终概念图
   if (result.imagePrompt) {
@@ -430,12 +442,20 @@ export async function runBrainstorm({ intent, personas, apiConfig, onEvent, cont
       }
     }
 
-    // 最终整合
-    onEvent?.({ type: "synthesizing" });
-    const finalResult = await synthesizeFinal(intent, history, apiConfig);
-    onEvent?.({ type: "final", result: finalResult });
+    // 如果是硬停止且没有历史，直接返回
+    if (control?.shouldStop && history.length === 0) {
+      return { history, finalResult: null };
+    }
 
-    return { history, finalResult };
+    // 最终整合（forceConverge 或自然收敛都要整合）
+    if (!control?.shouldStop) {
+      onEvent?.({ type: "synthesizing" });
+      const finalResult = await synthesizeFinal(intent, history, apiConfig);
+      onEvent?.({ type: "final", result: finalResult });
+      return { history, finalResult };
+    }
+
+    return { history, finalResult: null };
   } catch (error) {
     onEvent?.({ type: "error", error: error.message });
     throw error;

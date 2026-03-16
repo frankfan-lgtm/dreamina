@@ -6,7 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3456;
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" }));
 app.use((req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
   res.set("Pragma", "no-cache");
@@ -15,7 +15,6 @@ app.use((req, res, next) => {
   res.set("ETag", `"${Date.now()}"`);
   next();
 });
-app.use(express.static(join(__dirname, "dist"), { etag: false, lastModified: false }));
 
 app.post("/api/claude", async (req, res) => {
   const { systemPrompt, userPrompt, messages: chatMessages, apiKey, baseUrl, model } = req.body;
@@ -100,20 +99,27 @@ app.post("/api/claude", async (req, res) => {
 });
 
 // ─── VLM 图片理解代理 (Doubao-Seed-2.0-lite) ───
+// 图片在服务端直接构建多模态消息，避免 base64 数据通过客户端传输超过 body 限制
 app.post("/api/vlm", async (req, res) => {
-  const { systemPrompt, messages, apiKey } = req.body;
+  const { systemPrompt, textContent, imageUrl, apiKey } = req.body;
 
-  if (!systemPrompt || !messages) {
-    return res.status(400).json({ error: "缺少 systemPrompt 或 messages" });
+  if (!systemPrompt || !textContent) {
+    return res.status(400).json({ error: "缺少 systemPrompt 或 textContent" });
   }
 
   const key = apiKey || process.env.API_KEY;
   if (!key) {
-    return res.status(400).json({ error: "缺少 API Key" });
+    return res.status(400).json({ error: "缺少 API Key，请在界面设置中输入或设置环境变量 API_KEY" });
   }
 
   const url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
   const modelId = "Doubao-Seed-2.0-lite";
+
+  // 构建多模态用户消息
+  const userContent = [{ type: "text", text: textContent }];
+  if (imageUrl) {
+    userContent.push({ type: "image_url", image_url: { url: imageUrl } });
+  }
 
   try {
     const response = await fetch(url, {
@@ -126,12 +132,12 @@ app.post("/api/vlm", async (req, res) => {
         model: modelId,
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages,
+          { role: "user", content: userContent },
         ],
         max_tokens: 2048,
         temperature: 0.3,
       }),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!response.ok) {
@@ -145,6 +151,7 @@ app.post("/api/vlm", async (req, res) => {
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content;
     if (!text) {
+      console.error("[VLM API] 返回内容为空:", JSON.stringify(data).slice(0, 500));
       return res.status(500).json({ error: "VLM返回内容为空" });
     }
 
@@ -215,6 +222,9 @@ app.post("/api/image", async (req, res) => {
     return res.status(500).json({ error: `图片请求失败: ${err.message}` });
   }
 });
+
+// 静态文件服务放在 API 路由之后
+app.use(express.static(join(__dirname, "dist"), { etag: false, lastModified: false }));
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`\n🌌 创世模拟器已启动！`);

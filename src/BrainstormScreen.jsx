@@ -1,4 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+
+// fadeIn keyframe 注入
+if (typeof document !== "undefined" && !document.getElementById("brainstorm-keyframes")) {
+  const style = document.createElement("style");
+  style.id = "brainstorm-keyframes";
+  style.textContent = `@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`;
+  document.head.appendChild(style);
+}
 import {
   generatePersonas,
   singleAgentCreate,
@@ -26,7 +34,7 @@ function ChatBubble({ msg, color }) {
       </div>
       <div
         className="ml-7 text-sm leading-relaxed"
-        style={{ color: TEXT_MAIN, whiteSpace: "pre-wrap" }}
+        style={{ color: TEXT_MAIN, whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
       >
         {msg.message}
       </div>
@@ -112,7 +120,7 @@ function FinalCard({ result }) {
       </div>
       <div
         className="text-sm leading-relaxed mb-4"
-        style={{ color: TEXT_MAIN, whiteSpace: "pre-wrap" }}
+        style={{ color: TEXT_MAIN, whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
       >
         {result.detail}
       </div>
@@ -344,6 +352,15 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
 
   // 控制
   const controlRef = useRef({ shouldStop: false, forceConverge: false });
+  const mountedRef = useRef(true);
+
+  // 组件卸载时停止脑爆
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      controlRef.current.shouldStop = true;
+    };
+  }, []);
 
   // 投票
   const [vote, setVote] = useState(null);
@@ -373,6 +390,12 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
 
   // 开始脑爆
   const handleStart = async () => {
+    // 验证API配置
+    if (!apiConfig?.apiKey) {
+      alert("请先在设置中配置API密钥");
+      return;
+    }
+
     // 验证人设
     const validPersonas = personas.filter(
       (p) => p.name && p.role && p.style
@@ -390,7 +413,7 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
     const multiPromise = runMultiAgent(validPersonas);
 
     await Promise.allSettled([singlePromise, multiPromise]);
-    setStage("done");
+    if (mountedRef.current) setStage("done");
   };
 
   // 单Agent流程
@@ -449,22 +472,37 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
         apiConfig,
         control: controlRef.current,
         onEvent: (event) => {
+          if (!mountedRef.current) return;
           switch (event.type) {
             case "round_start":
               setMultiStatus(`第${event.round}轮讨论中...`);
               break;
-            case "agent_message":
-              setMultiMessages((prev) => [
-                ...prev,
-                {
-                  ...event.message,
-                  _round: event.round,
-                  _agentIndex: validPersonas.findIndex(
-                    (p) => p.name === event.message.agent
-                  ),
-                },
-              ]);
+            case "agent_message": {
+              const enriched = {
+                ...event.message,
+                _round: event.round,
+                _agentIndex: validPersonas.findIndex(
+                  (p) => p.name === event.message.agent
+                ),
+              };
+              // imageStatus="done" 替换之前的 "generating" 消息
+              if (event.message.imageStatus === "done") {
+                setMultiMessages((prev) => {
+                  const idx = prev.findLastIndex(
+                    (m) => m.agent === event.message.agent && m._round === event.round && m.imageStatus === "generating"
+                  );
+                  if (idx >= 0) {
+                    const updated = [...prev];
+                    updated[idx] = enriched;
+                    return updated;
+                  }
+                  return [...prev, enriched];
+                });
+              } else {
+                setMultiMessages((prev) => [...prev, enriched]);
+              }
               break;
+            }
             case "moderator":
               setMultiModResults((prev) => [...prev, { round: event.round, result: event.result }]);
               break;
@@ -665,7 +703,7 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
           )}
 
           {/* 开始按钮 */}
-          {intent.trim() && personas[0]?.name && (
+          {intent.trim() && personas.filter(p => p.name && p.role && p.style).length >= 2 && (
             <button
               onClick={handleStart}
               className="w-full cursor-pointer transition-all text-base font-bold py-4 rounded-lg"
@@ -738,7 +776,7 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
       </div>
 
       {/* 左右对比面板 */}
-      <div className="flex flex-1 gap-3 p-4" style={{ minHeight: 0 }}>
+      <div className="flex flex-col md:flex-row flex-1 gap-3 p-4" style={{ minHeight: 0 }}>
         {/* 左：单Agent */}
         <ChatPanel
           title="单Agent"
