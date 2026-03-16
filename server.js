@@ -73,7 +73,7 @@ app.post("/api/claude", async (req, res) => {
         max_tokens: 4096,
         temperature: 0.8,
       }),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(120000),
     });
 
     if (!response.ok) {
@@ -137,7 +137,7 @@ app.post("/api/vlm", async (req, res) => {
         max_tokens: 2048,
         temperature: 0.3,
       }),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(120000),
     });
 
     if (!response.ok) {
@@ -193,7 +193,7 @@ app.post("/api/image", async (req, res) => {
         "Authorization": `Bearer ${key}`,
       },
       body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(120000),
     });
 
     if (!response.ok) {
