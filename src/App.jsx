@@ -2575,8 +2575,8 @@ function WorldSelectScreen({ onSelect, onCreateNew, onBrainstorm, apiConfig }) {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen p-8 overflow-y-auto"
-      style={{background:'radial-gradient(ellipse at center, #2a2a45 0%, #1a1a2e 65%, #0e1119 100%)', paddingTop:'6vh'}}>
+    <div className="flex flex-col items-center p-8"
+      style={{background:'radial-gradient(ellipse at center, #2a2a45 0%, #1a1a2e 65%, #0e1119 100%)', height:'100vh', overflowY:'auto', paddingTop:'6vh'}}>
       <div className="text-5xl mb-4">🌌</div>
       <h1 className="text-2xl font-bold mb-2" style={{color:'#ffd700'}}>选择你的世界</h1>
       <p className="mb-8 text-sm" style={{color:'#9ca3af'}}>选择一个预设世界，或者用几句话创造一个全新的世界</p>
