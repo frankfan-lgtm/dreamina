@@ -35,10 +35,16 @@ function parseJSON(text) {
     return JSON.parse(cleaned);
   } catch (e) {
     // 尝试修复常见问题
-    const fixed = cleaned
+    let fixed = cleaned
       .replace(/,\s*([}\]])/g, '$1')             // 去掉尾逗号
       .replace(/(?<=[{,]\s*)(\w+)\s*:/g, '"$1":') // 补全属性名引号
       .replace(/:\s*'([^']*)'/g, ': "$1"');       // 单引号值转双引号
+
+    // 修复未加引号的裸值（如中文文本直接作为值）
+    // 匹配 ": 非数字/非引号/非true/false/null 的裸文本"
+    fixed = fixed.replace(/:\s*(?!true|false|null|"|\d|[-\d]|\[|\{)([^\n,}\]]+?)(\s*[,}\]])/g,
+      (_, val, tail) => ': "' + val.trim().replace(/"/g, '\\"') + '"' + tail);
+
     try {
       return JSON.parse(fixed);
     } catch {
