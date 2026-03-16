@@ -71,8 +71,21 @@ function parseJSON(text) {
       });
       try {
         return JSON.parse(cleanedLines.join('\n'));
-      } catch {
-        throw new Error('JSON解析失败: ' + e.message + '\n原文前300字: ' + cleaned.slice(0, 300));
+      } catch (e3) {
+        // 提取出错位置附近的文本用于诊断
+        const posMatch = e.message.match(/position\s+(\d+)/);
+        const pos = posMatch ? parseInt(posMatch[1]) : 0;
+        const around = pos > 0
+          ? '出错位置附近: ...' + cleaned.slice(Math.max(0, pos - 60), pos + 60) + '...'
+          : '';
+        // 同时显示修复后文本在对应位置的内容
+        const posMatch2 = e2.message.match(/position\s+(\d+)/);
+        const pos2 = posMatch2 ? parseInt(posMatch2[1]) : 0;
+        const around2 = pos2 > 0
+          ? '\n修复后出错位置: ...' + fixed.slice(Math.max(0, pos2 - 60), pos2 + 60) + '...'
+          : '';
+        throw new Error('JSON解析失败: ' + e.message + '\n' + around + around2
+          + '\n原文前300字: ' + cleaned.slice(0, 300));
       }
     }
   }
