@@ -155,7 +155,7 @@ function initNpcs(npcData, relationshipData) {
 function ApiSetupScreen({ config, onSave }) {
   const [apiKey, setApiKey] = useState(config.apiKey || "");
   const [baseUrl, setBaseUrl] = useState(config.baseUrl || "https://ark.cn-beijing.volces.com/api/v3/chat/completions");
-  const [model, setModel] = useState(config.model || "doubao-seed-2-0-pro-260215");
+  const [model, setModel] = useState(config.model || "doubao-seed-2-0-mini-260215");
   const canSave = apiKey.trim() && model.trim();
 
   return (
