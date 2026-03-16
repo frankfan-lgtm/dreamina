@@ -113,7 +113,7 @@ app.post("/api/vlm", async (req, res) => {
   }
 
   const url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
-  const modelId = "Doubao-Seed-2.0-lite";
+  const modelId = "Doubao-Seed-2.0-mini";
 
   // 构建多模态用户消息
   const userContent = [{ type: "text", text: textContent }];
