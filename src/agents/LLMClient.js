@@ -34,21 +34,46 @@ function parseJSON(text) {
   try {
     return JSON.parse(cleaned);
   } catch (e) {
-    // 尝试修复常见问题
-    let fixed = cleaned
-      .replace(/,\s*([}\]])/g, '$1')             // 去掉尾逗号
-      .replace(/(?<=[{,]\s*)(\w+)\s*:/g, '"$1":') // 补全属性名引号
-      .replace(/:\s*'([^']*)'/g, ': "$1"');       // 单引号值转双引号
+    // 多轮修复，每轮修复一类问题
+    let fixed = cleaned;
 
-    // 修复未加引号的裸值（如中文文本直接作为值）
-    // 精确匹配: 冒号后的空格，然后一个非引号/非数字/非关键字开头的中文或字母裸值
+    // 1) 去掉尾逗号
+    fixed = fixed.replace(/,\s*([}\]])/g, '$1');
+
+    // 2) 单引号值转双引号
+    fixed = fixed.replace(/:\s*'([^']*)'/g, ': "$1"');
+
+    // 3) 补全属性名引号（仅匹配行首缩进后的裸属性名，避免破坏字符串内容）
+    fixed = fixed.replace(/(^|[\n{,])\s*([a-zA-Z_]\w*)\s*:/g, (m, pre, key) => {
+      return m.replace(key + ':', '"' + key + '":');
+    });
+
+    // 4) 修复属性名后缺冒号的情况：  "key" "value" → "key": "value"
+    //    以及 "key" 123 → "key": 123 和 "key" [ → "key": [ 和 "key" { → "key": {
+    fixed = fixed.replace(/"(\w+)"\s+(?=["{\[\dtfn])/g, '"$1": ');
+
+    // 5) 修复未加引号的裸中文值
     fixed = fixed.replace(/:(\s*)([\u4e00-\u9fff\u3400-\u4dbf][^\n,}\]]*?)(\s*[,}\]])/g,
       (_, _sp, val, tail) => ': "' + val.trim().replace(/"/g, '\\"') + '"' + tail);
 
+    // 6) 修复多余的逗号（可能在其他修复后产生）
+    fixed = fixed.replace(/,\s*([}\]])/g, '$1');
+
     try {
       return JSON.parse(fixed);
-    } catch {
-      throw new Error('JSON解析失败: ' + e.message + '\n原文前300字: ' + cleaned.slice(0, 300));
+    } catch (e2) {
+      // 最后尝试：逐行清理明显的语法错误
+      const lines = fixed.split('\n');
+      const cleanedLines = lines.filter(l => {
+        const trimmed = l.trim();
+        // 过滤掉空行和纯注释行
+        return trimmed && !trimmed.startsWith('//');
+      });
+      try {
+        return JSON.parse(cleanedLines.join('\n'));
+      } catch {
+        throw new Error('JSON解析失败: ' + e.message + '\n原文前300字: ' + cleaned.slice(0, 300));
+      }
     }
   }
 }
