@@ -555,7 +555,11 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-top: 24px;
-  padding-bottom: 40px;
+  padding: 24px 32px 32px;
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(transparent, rgba(15, 15, 35, 0.95) 20%);
+  z-index: 10;
 }
 .analysis-build-btn {
   padding: 10px 24px !important;
