@@ -44,7 +44,7 @@ function safeParse(text) {
       .replace(/(?<=[{,]\s*)(\w+)\s*:/g, '"$1":')
       .replace(/:\s*'([^']*)'/g, ': "$1"');
     // 修复未加引号的裸值（如中文文本）
-    fixed = fixed.replace(/:\s*(?!true|false|null|"|\d|[-\d]|\[|\{)([^\n,}\]]+?)(\s*[,}\]])/g,
+    fixed = fixed.replace(/:\s+([\u4e00-\u9fff\u3400-\u4dbf][^\n,}\]]*?)(\s*[,}\]])/g,
       (_, val, tail) => ': "' + val.trim().replace(/"/g, '\\"') + '"' + tail);
     return JSON.parse(fixed);
   }
