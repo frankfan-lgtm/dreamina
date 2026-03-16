@@ -34,9 +34,11 @@ function ChatBubble({ msg, color }) {
       </div>
       <div
         className="ml-7 text-sm leading-relaxed"
-        style={{ color: TEXT_MAIN, whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
+        style={{ color: TEXT_MAIN, overflowWrap: "break-word" }}
       >
-        {msg.message}
+        {msg.message && msg.message.includes("#") ? renderMarkdown(msg.message) : (
+          <span style={{ whiteSpace: "pre-wrap" }}>{msg.message}</span>
+        )}
       </div>
       {msg.imageStatus === "generating" && !msg.imageUrl && (
         <div className="ml-7 mt-2 text-xs" style={{ color: GOLD }}>
@@ -98,6 +100,113 @@ function ModeratorBubble({ result }) {
   );
 }
 
+// ─── 简易Markdown渲染 ───
+function renderMarkdown(text) {
+  if (!text) return null;
+  // 按行处理
+  const lines = text.split("\n");
+  const elements = [];
+  let inList = false;
+  let listItems = [];
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={`ul-${elements.length}`} style={{ paddingLeft: 20, margin: "6px 0" }}>
+          {listItems.map((item, i) => (
+            <li key={i} style={{ marginBottom: 2 }}>{formatInline(item)}</li>
+          ))}
+        </ul>
+      );
+      listItems = [];
+      inList = false;
+    }
+  };
+
+  // 内联格式：加粗、行内代码
+  const formatInline = (str) => {
+    const parts = [];
+    let remaining = str;
+    let key = 0;
+    // 简单处理 **加粗** 和 `代码`
+    const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g;
+    let lastIndex = 0;
+    let match;
+    while ((match = regex.exec(remaining)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(remaining.slice(lastIndex, match.index));
+      }
+      if (match[2]) {
+        parts.push(<strong key={key++} style={{ color: GOLD }}>{match[2]}</strong>);
+      } else if (match[3]) {
+        parts.push(
+          <code key={key++} style={{ background: "rgba(255,255,255,0.06)", padding: "1px 4px", borderRadius: 3, fontSize: "0.9em" }}>
+            {match[3]}
+          </code>
+        );
+      }
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < remaining.length) {
+      parts.push(remaining.slice(lastIndex));
+    }
+    return parts.length > 0 ? parts : str;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // 空行
+    if (!trimmed) {
+      flushList();
+      elements.push(<div key={`br-${i}`} style={{ height: 8 }} />);
+      continue;
+    }
+
+    // 标题
+    const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)/);
+    if (headingMatch) {
+      flushList();
+      const level = headingMatch[1].length;
+      const sizes = { 1: 18, 2: 16, 3: 14, 4: 13 };
+      elements.push(
+        <div
+          key={`h-${i}`}
+          style={{
+            fontSize: sizes[level] || 14,
+            fontWeight: "bold",
+            color: level <= 2 ? GOLD : TEXT_MAIN,
+            marginTop: level <= 2 ? 16 : 10,
+            marginBottom: 6,
+          }}
+        >
+          {formatInline(headingMatch[2])}
+        </div>
+      );
+      continue;
+    }
+
+    // 列表项
+    const listMatch = trimmed.match(/^[-*•]\s+(.+)/) || trimmed.match(/^\d+[.、]\s*(.+)/);
+    if (listMatch) {
+      inList = true;
+      listItems.push(listMatch[1]);
+      continue;
+    }
+
+    // 普通段落
+    flushList();
+    elements.push(
+      <div key={`p-${i}`} style={{ marginBottom: 4 }}>
+        {formatInline(trimmed)}
+      </div>
+    );
+  }
+  flushList();
+  return elements;
+}
+
 // ─── 最终方案卡片 ───
 function FinalCard({ result }) {
   if (!result) return null;
@@ -112,21 +221,23 @@ function FinalCard({ result }) {
       <div className="flex items-center gap-2 mb-3">
         <span style={{ fontSize: 20 }}>✨</span>
         <span className="font-bold text-lg" style={{ color: GOLD }}>
-          {result.title}
+          最终方案
         </span>
-      </div>
-      <div className="text-sm mb-3" style={{ color: "#a29bfe", fontStyle: "italic" }}>
-        {result.concept}
+        {result.concept && (
+          <span className="text-sm ml-2" style={{ color: "#a29bfe", fontStyle: "italic" }}>
+            {result.concept}
+          </span>
+        )}
       </div>
       <div
         className="text-sm leading-relaxed mb-4"
-        style={{ color: TEXT_MAIN, whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
+        style={{ color: TEXT_MAIN }}
       >
-        {result.detail}
+        {renderMarkdown(result.detail)}
       </div>
       {result.highlights && result.highlights.length > 0 && (
         <div className="mb-3">
-          <div className="text-xs mb-2" style={{ color: GOLD }}>亮点</div>
+          <div className="text-xs mb-2" style={{ color: GOLD }}>脑爆精华</div>
           <div className="flex flex-wrap gap-2">
             {result.highlights.map((h, i) => (
               <span

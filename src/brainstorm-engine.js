@@ -394,49 +394,86 @@ ${conversationText}
   }
 }
 
-// ─── 5. 最终方案整合 ───
+// ─── 5. 最终方案整合（混合模式：提取创意要点 → 单Agent写完整方案） ───
 
 export async function synthesizeFinal(intent, history, apiConfig) {
-  const systemPrompt = `你是一位创意总监。多位创意人刚完成了一场脑爆讨论，请你整合他们的最佳想法，输出一个完整的创意方案。
-
-要求：
-- 提取讨论中最精彩的创意点
-- 形成一个连贯、完整、可执行的方案
-- 保留讨论中涌现的亮点细节
-- 如果讨论中生成过概念图，引用并说明其作用
-- 方案要有吸引力，让人想立刻执行
-
-输出格式：
-{
-  "title": "创意方案标题（10字内，抓人）",
-  "concept": "核心创意概述（50字内）",
-  "detail": "详细方案描述（完整的执行方案，包含具体内容、亮点、节奏等）",
-  "highlights": ["亮点1", "亮点2", "亮点3"],
-  "imagePrompt": "为最终方案生成一张代表性概念图的英文描述（80词内）"
-}`;
-
+  // ── Step 1: 从多Agent讨论中提取创意要点 ──
   const conversationText = history
     .map(msg => {
-      let text = `${msg.agentEmoji} ${msg.agent}：${msg.message}`;
+      let text = `${msg.agentEmoji} ${msg.agent}（${msg.agentRole}）：${msg.message}`;
       if (msg.imageDescription) text += `\n[概念图描述: ${msg.imageDescription}]`;
       return text;
     })
     .join("\n\n");
 
-  const userPrompt = `创作意图：${intent}
+  const extractPrompt = `你是一位创意总监，请从以下脑爆讨论中提取最有价值的创意要点。
+
+讨论是围绕「${intent}」展开的。
 
 脑爆讨论全文：
 ${conversationText}
 
-请整合出最终创意方案。`;
+请提取：
+1. 最核心的创意共识（所有人认可或发展的方向）
+2. 各角色贡献的最精彩的具体创意点（至少5个）
+3. 讨论中涌现的独特细节和亮点
+4. 任何有价值的分歧观点（可作为方案的备选或补充）
 
-  const raw = await fetchLLM(apiConfig, systemPrompt, [{ role: "user", content: userPrompt }]);
-  let result;
+输出JSON格式：
+{
+  "coreIdea": "核心创意方向（一句话）",
+  "bestIdeas": ["具体创意点1", "具体创意点2", ...],
+  "uniqueDetails": ["独特细节1", "独特细节2", ...],
+  "alternativeViews": ["分歧观点1（可选）"],
+  "imagePrompt": "为最终方案生成一张代表性概念图的英文描述（80词内）"
+}`;
+
+  let extracted;
   try {
-    result = parseJSON(raw);
+    const extractRaw = await fetchLLM(apiConfig, "你是一位创意分析专家。", [{ role: "user", content: extractPrompt }]);
+    extracted = parseJSON(extractRaw);
   } catch {
-    result = { title: "创意方案", concept: "", detail: raw, highlights: [], imagePrompt: null };
+    // 提取失败，直接用讨论原文
+    extracted = { coreIdea: "", bestIdeas: [], uniqueDetails: [], alternativeViews: [] };
   }
+
+  // ── Step 2: 基于提取的创意要点，用单Agent写完整方案 ──
+  const creativeContext = [
+    extracted.coreIdea ? `核心创意方向：${extracted.coreIdea}` : "",
+    extracted.bestIdeas?.length ? `\n精彩创意点：\n${extracted.bestIdeas.map((p, i) => `${i + 1}. ${p}`).join("\n")}` : "",
+    extracted.uniqueDetails?.length ? `\n独特细节：\n${extracted.uniqueDetails.map(d => `- ${d}`).join("\n")}` : "",
+    extracted.alternativeViews?.length ? `\n备选方向：\n${extracted.alternativeViews.map(v => `- ${v}`).join("\n")}` : "",
+  ].filter(Boolean).join("\n");
+
+  const finalSystemPrompt = `你是一个顶尖的创意策划专家。你的团队刚刚完成了一场激烈的创意脑爆讨论，产出了许多精彩的创意点。
+
+现在请你基于这些创意素材，写出一个完整、详细、有吸引力的创意方案。
+
+要求：
+- 方案要具体可执行，不要停留在概念层面
+- 充分融合团队脑爆的精华创意，但要形成连贯的整体方案
+- 包含核心创意点、具体内容描述、执行细节、亮点分析
+- 如果涉及视觉内容，详细描述画面
+- 用生动有感染力的语言表达
+- 方案要比单人思考更丰富——因为你有团队脑爆的素材加持
+- 直接输出完整的方案文本（Markdown格式），不要输出JSON`;
+
+  const finalUserPrompt = `创作意图：${intent}
+
+团队脑爆提炼的创意素材：
+${creativeContext}
+
+请基于以上素材，写出你最好的完整创意方案。要比任何单人能想到的方案更丰富、更有创意、更落地。`;
+
+  const fullPlan = await fetchLLM(apiConfig, finalSystemPrompt, [{ role: "user", content: finalUserPrompt }]);
+
+  const result = {
+    title: "多Agent脑爆方案",
+    concept: extracted.coreIdea || "",
+    detail: fullPlan,
+    highlights: extracted.bestIdeas?.slice(0, 5) || [],
+    imagePrompt: extracted.imagePrompt || null,
+  };
 
   // 生成最终概念图
   if (result.imagePrompt) {
