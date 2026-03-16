@@ -2673,7 +2673,16 @@ export default function App() {
   const [apiConfig, setApiConfig] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 自动迁移：替换已被限额的旧模型
+        if (parsed.model && parsed.model.includes("lite")) {
+          parsed.model = "doubao-seed-2-0-mini-260215";
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        }
+        return parsed;
+      }
+      return {};
     } catch { return {}; }
   });
 
