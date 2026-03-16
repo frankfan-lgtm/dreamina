@@ -42,8 +42,8 @@ function parseJSON(text) {
 
     // 修复未加引号的裸值（如中文文本直接作为值）
     // 精确匹配: 冒号后的空格，然后一个非引号/非数字/非关键字开头的中文或字母裸值
-    fixed = fixed.replace(/:\s+([\u4e00-\u9fff\u3400-\u4dbf][^\n,}\]]*?)(\s*[,}\]])/g,
-      (_, val, tail) => ': "' + val.trim().replace(/"/g, '\\"') + '"' + tail);
+    fixed = fixed.replace(/:(\s*)([\u4e00-\u9fff\u3400-\u4dbf][^\n,}\]]*?)(\s*[,}\]])/g,
+      (_, _sp, val, tail) => ': "' + val.trim().replace(/"/g, '\\"') + '"' + tail);
 
     try {
       return JSON.parse(fixed);
