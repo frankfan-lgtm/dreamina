@@ -374,12 +374,12 @@ body {
    页面2: 世界分析确认页
    ═══════════════════════════════════════════ */
 .analysis-page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   position: relative;
-  overflow: auto;
+  overflow-y: auto;
   padding: 40px 16px;
 }
 .analysis-page-bg {
@@ -555,6 +555,7 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-top: 24px;
+  padding-bottom: 40px;
 }
 .analysis-build-btn {
   padding: 10px 24px !important;
