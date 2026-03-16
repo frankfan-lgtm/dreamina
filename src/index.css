@@ -393,6 +393,7 @@ body {
   z-index: 1;
   width: 100%;
   max-width: 680px;
+  padding-bottom: 100px;
 }
 .analysis-header {
   display: flex;
@@ -554,12 +555,16 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 24px;
-  padding: 24px 32px 32px;
-  position: sticky;
+  position: fixed;
   bottom: 0;
-  background: linear-gradient(transparent, rgba(15, 15, 35, 0.95) 20%);
-  z-index: 10;
+  left: 0;
+  right: 0;
+  padding: 20px 32px 28px;
+  background: linear-gradient(transparent, rgba(15, 15, 35, 0.95) 30%);
+  z-index: 100;
+}
+.analysis-actions .btn-pokemon {
+  max-width: 300px;
 }
 .analysis-build-btn {
   padding: 10px 24px !important;
