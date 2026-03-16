@@ -2603,18 +2603,30 @@ function WorldSelectScreen({ onSelect, onCreateNew, onBrainstorm, apiConfig }) {
         ))}
       </div>
 
-      {/* 创造新世界 */}
+      {/* 创造新世界 & 创意脑爆 并排 */}
       {!showCreate ? (
-        <button onClick={() => setShowCreate(true)}
-          className="cursor-pointer transition-all"
-          style={{
-            background:'rgba(255,215,0,0.08)', border:'2px dashed rgba(255,215,0,0.3)',
-            borderRadius:8, padding:'16px 32px', color:'#ffd700', fontSize:14,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#ffd700'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,215,0,0.3)'; }}>
-          ✨ 创造新世界
-        </button>
+        <div className="flex gap-4 flex-wrap justify-center">
+          <button onClick={() => setShowCreate(true)}
+            className="cursor-pointer transition-all"
+            style={{
+              background:'rgba(255,215,0,0.08)', border:'2px dashed rgba(255,215,0,0.3)',
+              borderRadius:8, padding:'16px 32px', color:'#ffd700', fontSize:14,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#ffd700'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,215,0,0.3)'; }}>
+            ✨ 创造新世界
+          </button>
+          <button onClick={onBrainstorm}
+            className="cursor-pointer transition-all"
+            style={{
+              background:'rgba(255,107,107,0.08)', border:'2px dashed rgba(255,107,107,0.3)',
+              borderRadius:8, padding:'16px 32px', color:'#ff6b6b', fontSize:14,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b6b'; e.currentTarget.style.background = 'rgba(255,107,107,0.12)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)'; e.currentTarget.style.background = 'rgba(255,107,107,0.08)'; }}>
+            🧠 创意脑爆
+          </button>
+        </div>
       ) : (
         <div className="w-full max-w-2xl"
           style={{background:'#141722', border:'2px solid #2a2a45', borderRadius:8, padding:24}}>
@@ -2650,22 +2662,6 @@ function WorldSelectScreen({ onSelect, onCreateNew, onBrainstorm, apiConfig }) {
           )}
         </div>
       )}
-      {/* 创意脑爆入口 */}
-      <div className="mt-6">
-        <button onClick={onBrainstorm}
-          className="cursor-pointer transition-all"
-          style={{
-            background:'rgba(255,107,107,0.08)', border:'2px dashed rgba(255,107,107,0.3)',
-            borderRadius:8, padding:'16px 32px', color:'#ff6b6b', fontSize:14,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b6b'; e.currentTarget.style.background = 'rgba(255,107,107,0.12)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)'; e.currentTarget.style.background = 'rgba(255,107,107,0.08)'; }}>
-          🧠 创意脑爆 — 多Agent vs 单Agent 创意对决
-        </button>
-        <div className="text-xs mt-2 text-center" style={{color:'#9ca3af'}}>
-          多个AI创意人围绕你的想法展开脑爆，验证多Agent是否能产出更好的创意
-        </div>
-      </div>
     </div>
   );
 }
