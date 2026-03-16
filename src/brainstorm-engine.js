@@ -12,6 +12,11 @@ const MAX_ROUNDS = 15;
 
 // ─── LLM 调用基础设施（复用现有 /api/claude） ───
 
+function sanitizeModel(model) {
+  if (model && model.includes("lite")) return "doubao-seed-2-0-mini-260215";
+  return model;
+}
+
 async function fetchLLM(apiConfig, systemPrompt, messages, modelOverride) {
   const res = await fetch("/api/claude", {
     method: "POST",
@@ -21,7 +26,7 @@ async function fetchLLM(apiConfig, systemPrompt, messages, modelOverride) {
       messages,
       apiKey: apiConfig.apiKey,
       baseUrl: apiConfig.baseUrl,
-      model: modelOverride || apiConfig.model,
+      model: sanitizeModel(modelOverride || apiConfig.model),
     }),
   });
 
