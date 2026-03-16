@@ -27,14 +27,14 @@ export function initAgents(apiConfig, npcs) {
     maxRetries: 2,
     retryDelay: 800,
     maxConcurrent: 5,
-    timeout: 60000,
+    timeout: 180000,
   });
 
   _director = new Director(apiConfig, {
     maxRetries: 2,
     retryDelay: 1000,
     maxConcurrent: 2,
-    timeout: 90000,
+    timeout: 180000,
   });
 
   _agents = new Map();

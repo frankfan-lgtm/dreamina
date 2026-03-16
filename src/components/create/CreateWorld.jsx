@@ -86,7 +86,7 @@ export default function CreateWorld() {
     setError("");
 
     try {
-      const analyst = new WorldAnalyst(apiConfig, { maxRetries: 2, timeout: 60000 });
+      const analyst = new WorldAnalyst(apiConfig, { maxRetries: 2, timeout: 180000 });
       const analysis = await analyst.analyze(worldPrompt);
 
       // 存储 V2 分析结果（含完整蓝图数据，供 WorldArchitect 使用）

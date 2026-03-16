@@ -131,7 +131,7 @@ async function callLLM({ url, key, modelId, apiMessages, maxTokens = 4096, tempe
             max_tokens: maxTokens,
             temperature,
           }),
-          signal: AbortSignal.timeout(60000),
+          signal: AbortSignal.timeout(180000),
         });
 
         if (!response.ok) {
