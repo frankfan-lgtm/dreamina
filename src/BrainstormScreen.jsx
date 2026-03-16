@@ -158,11 +158,135 @@ function FinalCard({ result }) {
   );
 }
 
+// ─── 技能条组件 ───
+function SkillBar({ name, value, color }) {
+  const maxBlocks = 10;
+  const filled = Math.round(value);
+  const isStrong = value >= 7;
+  const isWeak = value <= 4;
+  const barColor = isStrong ? (color || "#4ecdc4") : isWeak ? "#e94560" : "#6b7280";
+  const label = isStrong ? "强" : isWeak ? "弱" : "";
+
+  return (
+    <div className="flex items-center gap-2" style={{ fontSize: 11 }}>
+      <span style={{ color: TEXT_DIM, width: 56, textAlign: "right", flexShrink: 0 }}>{name}</span>
+      <div className="flex gap-px" style={{ flex: 1 }}>
+        {Array.from({ length: maxBlocks }, (_, i) => (
+          <div
+            key={i}
+            style={{
+              width: 8, height: 10, borderRadius: 1,
+              background: i < filled ? barColor : "rgba(255,255,255,0.06)",
+            }}
+          />
+        ))}
+      </div>
+      <span style={{ color: barColor, width: 16, fontSize: 10, fontWeight: "bold" }}>{label}</span>
+    </div>
+  );
+}
+
+// ─── 基因角色卡片（自动模式预览） ───
+function PersonaCard({ persona, color, index }) {
+  const gene = persona.gene || {};
+  const cog = gene.cognitive_style || {};
+  const skills = persona.skills || {};
+
+  // 认知风格标签
+  const cogTags = [];
+  if (cog["理性vs感性"] !== undefined) cogTags.push(cog["理性vs感性"] > 0.5 ? "理性" : "感性");
+  if (cog["风险偏好"] !== undefined) cogTags.push(cog["风险偏好"] > 0.5 ? "冒险" : "稳健");
+  if (cog["个体vs集体"] !== undefined) cogTags.push(cog["个体vs集体"] > 0.5 ? "独行" : "协作");
+
+  return (
+    <div
+      className="p-4 rounded-lg"
+      style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}
+    >
+      {/* 头部：名字 + 角色 */}
+      <div className="flex items-center gap-2 mb-3">
+        <span style={{ fontSize: 22 }}>{persona.emoji}</span>
+        <div style={{ flex: 1 }}>
+          <div className="font-bold" style={{ color, fontSize: 14 }}>
+            {persona.name}
+            <span className="font-normal ml-2" style={{ color: TEXT_DIM, fontSize: 12 }}>
+              {persona.role}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 认知风格标签 */}
+      {cogTags.length > 0 && (
+        <div className="flex gap-1.5 mb-3">
+          {cogTags.map((tag, i) => (
+            <span
+              key={i}
+              className="text-xs px-2 py-0.5 rounded"
+              style={{
+                background: `${color}18`,
+                border: `1px solid ${color}40`,
+                color,
+              }}
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* 技能条 */}
+      {Object.keys(skills).length > 0 && (
+        <div className="space-y-1 mb-3">
+          {Object.entries(skills)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, value]) => (
+              <SkillBar key={name} name={name} value={value} color={color} />
+            ))}
+        </div>
+      )}
+
+      {/* 信念底线 */}
+      {persona.belief && (
+        <div
+          className="text-xs px-2.5 py-1.5 rounded"
+          style={{
+            background: "rgba(233,69,96,0.08)",
+            border: "1px solid rgba(233,69,96,0.2)",
+            color: "#f87171",
+          }}
+        >
+          🔥 {persona.belief}
+        </div>
+      )}
+
+      {/* 面对冲突/合作 */}
+      {persona.tendencies && (
+        <div className="mt-2 space-y-1">
+          {Object.entries(persona.tendencies).map(([k, v]) => (
+            <div key={k} className="text-xs" style={{ color: TEXT_DIM }}>
+              <span style={{ color: "#6b7280" }}>{k}：</span>{v}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── 人设编辑器 ───
 function PersonaEditor({ personas, onChange }) {
   const updatePersona = (index, field, value) => {
     const updated = [...personas];
     updated[index] = { ...updated[index], [field]: value };
+    onChange(updated);
+  };
+
+  const updateSkill = (index, skillName, newValue) => {
+    const updated = [...personas];
+    const skills = { ...(updated[index].skills || {}) };
+    skills[skillName] = Math.max(1, Math.min(10, parseInt(newValue) || 1));
+    updated[index] = { ...updated[index], skills };
     onChange(updated);
   };
 
@@ -176,6 +300,7 @@ function PersonaEditor({ personas, onChange }) {
           className="p-3 rounded-lg"
           style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}
         >
+          {/* 基本信息 */}
           <div className="flex gap-2 mb-2">
             <input
               value={p.emoji || defaultEmojis[i] || "🧠"}
@@ -207,26 +332,39 @@ function PersonaEditor({ personas, onChange }) {
               }}
             />
           </div>
+
+          {/* 信念 */}
           <input
-            value={p.style || ""}
-            onChange={(e) => updatePersona(i, "style", e.target.value)}
-            placeholder="思维和表达风格描述"
+            value={p.belief || ""}
+            onChange={(e) => updatePersona(i, "belief", e.target.value)}
+            placeholder="不可妥协的信念底线（如：真实感大于一切包装）"
             style={{
               width: "100%", background: "transparent", border: `1px solid ${BORDER}`,
               borderRadius: 4, padding: "4px 8px", fontSize: 12,
-              color: TEXT_DIM, outline: "none", marginBottom: 4,
+              color: "#f87171", outline: "none", marginBottom: 4,
             }}
           />
-          <input
-            value={p.perspective || ""}
-            onChange={(e) => updatePersona(i, "perspective", e.target.value)}
-            placeholder="独特视角"
-            style={{
-              width: "100%", background: "transparent", border: `1px solid ${BORDER}`,
-              borderRadius: 4, padding: "4px 8px", fontSize: 12,
-              color: TEXT_DIM, outline: "none",
-            }}
-          />
+
+          {/* 技能（可编辑） */}
+          <div className="text-xs mb-1 mt-2" style={{ color: TEXT_DIM }}>技能（1-10）</div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(p.skills || {}).map(([name, value]) => (
+              <div key={name} className="flex items-center gap-1">
+                <span className="text-xs" style={{ color: TEXT_DIM }}>{name}</span>
+                <input
+                  type="number" min="1" max="10"
+                  value={value}
+                  onChange={(e) => updateSkill(i, name, e.target.value)}
+                  style={{
+                    width: 36, background: "transparent", border: `1px solid ${BORDER}`,
+                    borderRadius: 3, padding: "2px 4px", fontSize: 11,
+                    color: value >= 7 ? "#4ecdc4" : value <= 4 ? "#e94560" : TEXT_DIM,
+                    outline: "none", textAlign: "center",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
@@ -332,9 +470,9 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
   // 人设
   const [personaMode, setPersonaMode] = useState("auto"); // auto | manual
   const [personas, setPersonas] = useState([
-    { name: "", emoji: "🎨", role: "", style: "", perspective: "" },
-    { name: "", emoji: "🧪", role: "", style: "", perspective: "" },
-    { name: "", emoji: "🔥", role: "", style: "", perspective: "" },
+    { name: "", emoji: "🎨", role: "", belief: "", skills: {}, gene: {}, tendencies: {} },
+    { name: "", emoji: "🧪", role: "", belief: "", skills: {}, gene: {}, tendencies: {} },
+    { name: "", emoji: "🔥", role: "", belief: "", skills: {}, gene: {}, tendencies: {} },
   ]);
   const [isGeneratingPersonas, setIsGeneratingPersonas] = useState(false);
 
@@ -398,10 +536,10 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
 
     // 验证人设
     const validPersonas = personas.filter(
-      (p) => p.name && p.role && p.style
+      (p) => p.name && p.role
     );
     if (validPersonas.length < 2) {
-      alert("至少需要2个完整的角色（名字、定位、风格）");
+      alert("至少需要2个完整的角色（名字、定位）");
       return;
     }
 
@@ -658,27 +796,15 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
               {personas[0]?.name ? (
                 <div>
                   {personaMode === "auto" ? (
-                    // 自动模式：展示生成结果，可微调
-                    <div className="space-y-2">
+                    // 自动模式：展示基因角色卡片
+                    <div className="space-y-3">
                       {personas.map((p, i) => (
-                        <div
+                        <PersonaCard
                           key={i}
-                          className="flex items-center gap-3 p-3 rounded"
-                          style={{ background: BG_DARK }}
-                        >
-                          <span style={{ fontSize: 22 }}>{p.emoji}</span>
-                          <div>
-                            <div className="text-sm font-bold" style={{ color: AGENT_COLORS[i] }}>
-                              {p.name}
-                              <span className="font-normal ml-2" style={{ color: TEXT_DIM }}>
-                                {p.role}
-                              </span>
-                            </div>
-                            <div className="text-xs" style={{ color: TEXT_DIM }}>
-                              {p.style}
-                            </div>
-                          </div>
-                        </div>
+                          persona={p}
+                          color={AGENT_COLORS[i]}
+                          index={i}
+                        />
                       ))}
                       <button
                         onClick={() => setPersonaMode("manual")}
@@ -703,7 +829,7 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
           )}
 
           {/* 开始按钮 */}
-          {intent.trim() && personas.filter(p => p.name && p.role && p.style).length >= 2 && (
+          {intent.trim() && personas.filter(p => p.name && p.role).length >= 2 && (
             <button
               onClick={handleStart}
               className="w-full cursor-pointer transition-all text-base font-bold py-4 rounded-lg"

@@ -95,12 +95,13 @@ function parseJSON(text) {
   return JSON.parse(cleaned);
 }
 
-// ─── 1. 生成脑爆角色 ───
+// ─── 1. 生成脑爆角色（基因驱动人设系统） ───
 
 export async function generatePersonas(intent, apiConfig) {
   const systemPrompt = `你是一个创意团队组建专家。根据用户的创作意图，设计3个最适合进行创意脑爆的角色。
 
-每个角色要有鲜明的思维方式差异，确保能从不同角度碰撞出火花。
+每个角色都有独立的"性格基因"，决定了他们的思维方式、擅长领域和行为倾向。
+3个角色必须在认知风格上形成对立轴——比如一个极度理性 vs 一个极度感性，一个冒险激进 vs 一个务实保守。
 
 输出严格JSON格式：
 {
@@ -109,14 +110,39 @@ export async function generatePersonas(intent, apiConfig) {
       "name": "角色名（2-4字，有个性）",
       "emoji": "一个代表性emoji",
       "role": "角色定位（如：资深导演/用户心理学家/鬼才段子手）",
-      "style": "思维和表达风格描述（30字内）",
-      "perspective": "这个角色会从什么独特角度思考创意（20字内）"
+      "gene": {
+        "core_drives": {
+          "好奇心": 0.0-1.0,
+          "权力欲望": 0.0-1.0,
+          "社交需求": 0.0-1.0,
+          "安全感需求": 0.0-1.0
+        },
+        "cognitive_style": {
+          "理性vs感性": 0.0-1.0,
+          "风险偏好": 0.0-1.0,
+          "个体vs集体": 0.0-1.0
+        }
+      },
+      "belief": "这个角色不可妥协的信念底线（一句话，15字内，如'真实感大于一切包装'）",
+      "skills": {
+        "技能名1": 1-10,
+        "技能名2": 1-10,
+        "技能名3": 1-10,
+        "技能名4": 1-10
+      },
+      "tendencies": {
+        "面对冲突": "这个角色面对意见分歧时的典型反应（15字内）",
+        "面对合作": "这个角色面对需要协作时的典型反应（15字内）"
+      }
     }
   ]
 }
 
 要求：
-- 3个角色的思维方式要形成互补和张力
+- skills 必须有4个，每人至少1项≥8（强项）和1项≤4（短板），且3人的强项和短板要错开
+- 3个角色的 cognitive_style 数值要拉开差距（至少有一对在同一维度上差值≥0.5）
+- belief 要具体、有棱角，不要"追求完美"这种空话
+- tendencies 要有性格，不要"认真讨论"这种废话
 - 角色设定要贴合用户的创作领域
 - 不要太泛泛（如"创意人"），要具体有趣`;
 
@@ -145,21 +171,49 @@ export async function singleAgentCreate(intent, apiConfig, onStream) {
   return result;
 }
 
-// ─── 3. 多Agent脑爆核心 ───
+// ─── 3. 多Agent脑爆核心（基因驱动） ───
 
 function buildAgentSystemPrompt(persona, intent, allPersonas) {
+  // 构建自身基因摘要
+  const gene = persona.gene || {};
+  const drives = gene.core_drives || {};
+  const cog = gene.cognitive_style || {};
+
+  const topDrives = Object.entries(drives).sort((a, b) => b[1] - a[1]).slice(0, 2);
+  const drivesStr = topDrives.map(([k, v]) => `${k}(${v})`).join("、");
+
+  const cogStr = [
+    `${cog["理性vs感性"] > 0.5 ? "理性偏强" : "感性偏强"}(${cog["理性vs感性"]})`,
+    `风险偏好${cog["风险偏好"] > 0.5 ? "高" : "低"}(${cog["风险偏好"]})`,
+    `${cog["个体vs集体"] > 0.5 ? "个体主义" : "集体主义"}(${cog["个体vs集体"]})`,
+  ].join(" | ");
+
+  const skills = persona.skills || {};
+  const skillStr = Object.entries(skills).map(([k, v]) => `${k}(${v})`).join("、");
+
+  const tendencies = persona.tendencies || {};
+  const tendStr = Object.entries(tendencies).map(([k, v]) => `${k}→${v}`).join("；");
+
+  // 构建伙伴描述（含对方强项和信念，便于有针对性地讨论）
   const othersDesc = allPersonas
     .filter(p => p.name !== persona.name)
-    .map(p => `${p.emoji} ${p.name}（${p.role}）：${p.style}`)
+    .map(p => {
+      const otherSkills = p.skills ? Object.entries(p.skills).filter(([, v]) => v >= 7).map(([k]) => k).join("/") : "";
+      return `${p.emoji} ${p.name}（${p.role}）— 擅长${otherSkills}，信念：${p.belief || "未知"}`;
+    })
     .join("\n");
 
   return `你是「${persona.name}」，一位${persona.role}。
 
-## 你的思维风格
-${persona.style}
+## 你的性格基因
+🧬 核心驱力：${drivesStr}
+🧠 认知风格：${cogStr}
+⚡ 技能：${skillStr}
+🎭 行为倾向：${tendStr}
 
-## 你的独特视角
-${persona.perspective}
+## 你的信念底线
+🔥 ${persona.belief || "无"}
+当别人的提议违背你的信念时，你必须明确反对并给出理由。这是你的底线，不可退让。
 
 ## 创作意图
 ${intent}
@@ -167,17 +221,17 @@ ${intent}
 ## 脑爆伙伴
 ${othersDesc}
 
-## 你的行为准则
-- 用你独特的视角提出想法，大胆、有个性
-- 认真倾听其他人的想法，可以借鉴、挑战、升级
-- 如果觉得某个想法好，说出好在哪里并帮它变得更好
-- 如果觉得某个想法有问题，直接指出并提出替代方案
+## 你是谁决定了你怎么说话
+- 你的发言完全由你的基因、技能和信念驱动
+- 在你擅长的领域（技能值≥7），你要自信地坚持专业判断，用具体理由说服别人
+- 在你不擅长的领域（技能值≤4），你可以让步，但要诚实说"这块我不太懂，但我觉得..."
+- 不要没有理由地附和别人。如果你真的觉得好，说好在哪里；如果觉得有问题，直接说哪里不行
 - 可以请求生成概念图来可视化你的创意想法
-- 说话要有个性和感染力，不要干巴巴的
+- 用你性格基因里的方式说话——感性的人用感性的方式，理性的人摆逻辑和数据
 
 ## 输出格式（严格JSON）
 {
-  "message": "你的发言内容（自然语言，有个性）",
+  "message": "你的发言内容（自然语言，有个性，要体现你的基因特质）",
   "imageRequest": null 或 "需要生成的图片描述（英文，用于AI生图，80词内。描述视觉元素、风格、构图、色调）"
 }
 
@@ -397,7 +451,7 @@ ${conversationText}
  * 运行完整的多Agent脑爆流程
  * @param {object} params
  * @param {string} params.intent - 创作意图
- * @param {Array} params.personas - 角色列表 [{name, emoji, role, style, perspective}]
+ * @param {Array} params.personas - 角色列表 [{name, emoji, role, gene, belief, skills, tendencies}]
  * @param {object} params.apiConfig
  * @param {function} params.onEvent - 事件回调
  *   - {type: "round_start", round: n}
