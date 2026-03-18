@@ -100,6 +100,86 @@ function parseJSON(text) {
   return JSON.parse(cleaned);
 }
 
+// ─── 信号系统（signal-driven brainstorm） ───
+
+function generateSignals(round, persona, history, allPersonas) {
+  const signals = [];
+  const name = persona.name;
+  const myMsgs = history.filter(m => m.agent === name);
+  const otherMsgs = history.filter(m => m.agent !== name);
+
+  // 1. Time pressure
+  if (round >= 3) {
+    const intensity = round <= 5 ? 0.3 : round <= 8 ? 0.6 : 0.9;
+    const desc = round <= 5 ? '讨论了一会儿了，还没看到成型的方向' :
+      round <= 8 ? '时间在流逝，需要开始收敛了' : '再不拍板就来不及了';
+    signals.push({ type: 'pressure', desc, intensity });
+  }
+
+  // 2 & 3. Social: ignored vs adopted
+  if (myMsgs.length >= 2) {
+    const mentioned = otherMsgs.some(m => m.message && m.message.includes(name));
+    if (!mentioned) {
+      signals.push({ type: 'social', desc: '你说了好几个想法但没人接茬', intensity: 0.7 });
+    } else {
+      signals.push({ type: 'reward', desc: '你之前说的被别人发展了', intensity: 0.6 });
+    }
+  }
+
+  // 4. Being dominated
+  const counts = {};
+  for (const m of history) counts[m.agent] = (counts[m.agent] || 0) + 1;
+  const myCount = counts[name] || 0;
+  for (const [agent, count] of Object.entries(counts)) {
+    if (agent !== name && count >= myCount + 2) {
+      signals.push({ type: 'tension', desc: `${agent}一直在主导话语权`, intensity: 0.6 });
+      break;
+    }
+  }
+
+  // 5. Challenge — disagreement after my message
+  const disagreePat = /不同意|但是|问题是|不对|不行/;
+  for (let i = 1; i < history.length; i++) {
+    if (history[i - 1].agent === name && history[i].agent !== name &&
+        history[i].message && disagreePat.test(history[i].message)) {
+      signals.push({ type: 'challenge', desc: '有人直接质疑了你的观点', intensity: 0.7 });
+      break;
+    }
+  }
+
+  // 6. Momentum — last 2-3 messages building on each other
+  const recent = history.slice(-3);
+  if (recent.length >= 2) {
+    const buildPat = /同意|没错|在此基础上/;
+    const building = recent.filter(m => m.message && (buildPat.test(m.message) ||
+      allPersonas.some(p => p.name !== m.agent && m.message.includes(p.name))));
+    if (building.length >= 2) {
+      signals.push({ type: 'momentum', desc: '讨论找到了方向，有种要成的感觉', intensity: 0.7 });
+    }
+  }
+
+  // 7. Belief conflict heuristic
+  const lastRoundOthers = otherMsgs.slice(-2);
+  for (const m of lastRoundOthers) {
+    if (m.message && m.message.length > 200 && !m.message.includes(name)) {
+      signals.push({ type: 'tension', desc: '有人说了一大段但完全没提到你的方向，可能在另起炉灶', intensity: 0.4 });
+      break;
+    }
+  }
+
+  return signals;
+}
+
+function formatSignals(signals) {
+  if (!signals.length) return '';
+  const lines = signals.map(s => {
+    const filled = Math.round(s.intensity * 5);
+    const bar = '█'.repeat(filled) + '░'.repeat(5 - filled);
+    return `• ${s.desc} [${bar}]`;
+  });
+  return `📡 你现在感知到的：\n${lines.join('\n')}\n\n你的基因会放大某些信号、过滤掉另一些。从你此刻最强烈的感受出发，自然地说话。`;
+}
+
 // ─── 1. 生成脑爆角色（基因驱动人设系统） ───
 
 export async function generatePersonas(intent, apiConfig) {
@@ -126,6 +206,11 @@ export async function generatePersonas(intent, apiConfig) {
           "理性vs感性": 0.0-1.0,
           "风险偏好": 0.0-1.0,
           "个体vs集体": 0.0-1.0
+        },
+        "emotional_baseline": {
+          "焦虑倾向": 0.0-1.0,
+          "乐观倾向": 0.0-1.0,
+          "韧性": 0.0-1.0
         }
       },
       "belief": "这个角色不可妥协的信念底线（一句话，15字内，如'真实感大于一切包装'）",
@@ -146,6 +231,7 @@ export async function generatePersonas(intent, apiConfig) {
 要求：
 - skills 必须有4个，每人至少1项≥8（强项）和1项≤4（短板），且3人的强项和短板要错开
 - 3个角色的 cognitive_style 数值要拉开差距（至少有一对在同一维度上差值≥0.5）
+- emotional_baseline 3个角色要拉开差距——比如一个焦虑倾向高、一个乐观倾向高、一个韧性高
 - belief 要具体、有棱角，不要"追求完美"这种空话
 - tendencies 要有性格，不要"认真讨论"这种废话
 - 角色设定要贴合用户的创作领域
@@ -183,9 +269,7 @@ function buildAgentSystemPrompt(persona, intent, allPersonas) {
   const gene = persona.gene || {};
   const drives = gene.core_drives || {};
   const cog = gene.cognitive_style || {};
-
-  const topDrives = Object.entries(drives).sort((a, b) => b[1] - a[1]).slice(0, 2);
-  const drivesStr = topDrives.map(([k, v]) => `${k}(${v})`).join("、");
+  const emotionalBaseline = gene.emotional_baseline || {};
 
   const cogStr = [
     `${cog["理性vs感性"] > 0.5 ? "理性偏强" : "感性偏强"}(${cog["理性vs感性"]})`,
@@ -194,10 +278,58 @@ function buildAgentSystemPrompt(persona, intent, allPersonas) {
   ].join(" | ");
 
   const skills = persona.skills || {};
-  const skillStr = Object.entries(skills).map(([k, v]) => `${k}(${v})`).join("、");
+  const strongSkills = Object.entries(skills).filter(([, v]) => v >= 7).map(([k, v]) => `${k}(${v})`);
+  const weakSkills = Object.entries(skills).filter(([, v]) => v <= 4).map(([k, v]) => `${k}(${v})`);
 
   const tendencies = persona.tendencies || {};
   const tendStr = Object.entries(tendencies).map(([k, v]) => `${k}→${v}`).join("；");
+
+  // 信号过滤规则：基于基因值动态生成
+  const signalMap = {
+    "好奇心": {
+      high: "新想法让你兴奋，重复讨论让你烦",
+      low: "你更关注落地，对天马行空不太感冒",
+    },
+    "权力欲望": {
+      high: "被忽视让你不爽，想法被采纳让你来劲",
+      low: "你不太在意谁主导",
+    },
+    "社交需求": {
+      high: "别人的态度对你影响很大",
+      low: "你更关注事情本身，不太在意人际",
+    },
+    "安全感需求": {
+      high: "不确定性让你想找稳妥方案",
+      low: "你对风险无感",
+    },
+    "焦虑倾向": {
+      high: "压力和威胁信号会被你放大",
+      low: "压力对你影响不大",
+    },
+    "乐观倾向": {
+      high: "你倾向看到机会，压力信号对你影响小",
+      low: "你容易看到风险和问题",
+    },
+    "韧性": {
+      high: "被反驳了你不退缩",
+      low: "反对声音会让你犹豫",
+    },
+  };
+
+  const allGeneEntries = { ...drives, ...emotionalBaseline };
+  const sensitivityRules = [];
+  for (const [geneName, value] of Object.entries(allGeneEntries)) {
+    const mapping = signalMap[geneName];
+    if (!mapping) continue;
+    if (value >= 0.7) {
+      sensitivityRules.push(`${geneName} ${value} → ${mapping.high}`);
+    } else if (value <= 0.3) {
+      sensitivityRules.push(`${geneName} ${value} → ${mapping.low}`);
+    }
+  }
+  const sensitivityStr = sensitivityRules.length > 0
+    ? sensitivityRules.map(r => `• ${r}`).join("\n")
+    : "• 无显著信号偏好";
 
   // 构建伙伴描述（含对方强项和信念，便于有针对性地讨论）
   const othersDesc = allPersonas
@@ -210,11 +342,17 @@ function buildAgentSystemPrompt(persona, intent, allPersonas) {
 
   return `你是「${persona.name}」，一位${persona.role}。
 
-## 你的性格基因
-🧬 核心驱力：${drivesStr}
+## 你的信号过滤器（基因）
+你的基因不是标签，而是决定了哪些环境信号对你冲击最大：
+
 🧠 认知风格：${cogStr}
-⚡ 技能：${skillStr}
 🎭 行为倾向：${tendStr}
+
+📡 信号敏感度：
+${sensitivityStr}
+
+⚡ 强项技能：${strongSkills.length > 0 ? strongSkills.join("、") : "无"}
+⚠️ 短板技能：${weakSkills.length > 0 ? weakSkills.join("、") : "无"}
 
 ## 你的信念底线
 🔥 ${persona.belief || "无"}
@@ -226,13 +364,12 @@ ${intent}
 ## 脑爆伙伴
 ${othersDesc}
 
-## 你是谁决定了你怎么说话
-- 你的发言完全由你的基因、技能和信念驱动
+## 信号反应规则
+- 你的发言由你对当前信号的反应驱动
+- 不要假装面面俱到——你的基因让你只对某些事起反应
 - 在你擅长的领域（技能值≥7），你要自信地坚持专业判断，用具体理由说服别人
 - 在你不擅长的领域（技能值≤4），你可以让步，但要诚实说"这块我不太懂，但我觉得..."
-- 不要没有理由地附和别人。如果你真的觉得好，说好在哪里；如果觉得有问题，直接说哪里不行
 - 可以请求生成概念图来可视化你的创意想法
-- 用你性格基因里的方式说话——感性的人用感性的方式，理性的人摆逻辑和数据
 
 ## 输出格式（严格JSON）
 {
@@ -252,7 +389,7 @@ ${othersDesc}
  * @param {function} onMessage - 每条消息的回调
  * @returns {Array} 本轮所有消息
  */
-export async function brainstormRound(intent, personas, history, apiConfig, onMessage) {
+export async function brainstormRound(intent, personas, history, apiConfig, onMessage, roundNum = 1) {
   const roundMessages = [];
 
   for (const persona of personas) {
@@ -290,16 +427,19 @@ export async function brainstormRound(intent, personas, history, apiConfig, onMe
     }
     flushOthers();
 
-    // 如果没有任何历史，加一个开场引导
+    // 生成环境信号并注入 user prompt
+    const signals = generateSignals(roundNum, persona, [...history, ...roundMessages], personas);
+    const signalText = formatSignals(signals);
+
     if (chatMessages.length === 0) {
       chatMessages.push({
         role: "user",
-        content: `创意脑爆开始！请你作为${persona.name}（${persona.role}），针对「${intent}」这个创作意图，提出你的初始想法。`,
+        content: `创意脑爆开始！请你作为${persona.name}（${persona.role}），针对「${intent}」这个创作意图，提出你的初始想法。${signalText ? '\n\n' + signalText : ''}`,
       });
     } else {
       chatMessages.push({
         role: "user",
-        content: `请继续讨论，提出你的新想法或对其他人想法的回应。`,
+        content: signalText || `请继续讨论。`,
       });
     }
 
@@ -518,10 +658,11 @@ export async function runBrainstorm({ intent, personas, apiConfig, onEvent, cont
       roundNum++;
       onEvent?.({ type: "round_start", round: roundNum });
 
-      // 执行一轮脑爆
+      // 执行一轮脑爆（传入 roundNum 用于信号生成）
       const roundMessages = await brainstormRound(
         intent, personas, history, apiConfig,
-        (msg) => onEvent?.({ type: "agent_message", message: msg, round: roundNum })
+        (msg) => onEvent?.({ type: "agent_message", message: msg, round: roundNum }),
+        roundNum
       );
       history.push(...roundMessages);
 
