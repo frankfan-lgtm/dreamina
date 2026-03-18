@@ -243,24 +243,8 @@ export async function generatePersonas(intent, apiConfig) {
   return result.personas;
 }
 
-// ─── 2. 单Agent baseline ───
 
-export async function singleAgentCreate(intent, apiConfig, onStream) {
-  const systemPrompt = `你是一个顶尖的创意策划专家。请针对用户的创作意图，给出一个完整、详细、有吸引力的创意方案。
 
-要求：
-- 方案要具体可执行，不要停留在概念层面
-- 包含核心创意点、具体内容描述、亮点分析
-- 如果涉及视觉内容，详细描述画面
-- 用生动有感染力的语言表达`;
-
-  const userPrompt = `创作意图：${intent}\n\n请给出你最好的创意方案。`;
-
-  if (onStream) onStream({ type: "start" });
-  const result = await fetchLLM(apiConfig, systemPrompt, [{ role: "user", content: userPrompt }]);
-  if (onStream) onStream({ type: "done", content: result });
-  return result;
-}
 
 // ─── 3. 多Agent脑爆核心（基因驱动） ───
 

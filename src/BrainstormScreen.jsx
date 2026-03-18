@@ -9,7 +9,6 @@ if (typeof document !== "undefined" && !document.getElementById("brainstorm-keyf
 }
 import {
   generatePersonas,
-  singleAgentCreate,
   runBrainstorm,
 } from "./brainstorm-engine.js";
 
@@ -594,11 +593,6 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
   const [multiStatus, setMultiStatus] = useState("");
   const [multiRunning, setMultiRunning] = useState(false);
 
-  // 单Agent状态
-  const [singleMessages, setSingleMessages] = useState([]);
-  const [singleFinal, setSingleFinal] = useState(null);
-  const [singleRunning, setSingleRunning] = useState(false);
-
   // 控制
   const controlRef = useRef({ shouldStop: false, forceConverge: false });
   const mountedRef = useRef(true);
@@ -610,9 +604,6 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
       controlRef.current.shouldStop = true;
     };
   }, []);
-
-  // 投票
-  const [vote, setVote] = useState(null);
 
   // 示例创意意图
   const examples = [
@@ -657,53 +648,8 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
     setStage("running");
     controlRef.current = { shouldStop: false, forceConverge: false };
 
-    // 并行启动单Agent和多Agent
-    const singlePromise = runSingleAgent();
-    const multiPromise = runMultiAgent(validPersonas);
-
-    await Promise.allSettled([singlePromise, multiPromise]);
+    await runMultiAgent(validPersonas);
     if (mountedRef.current) setStage("done");
-  };
-
-  // 单Agent流程
-  const runSingleAgent = async () => {
-    setSingleRunning(true);
-    setSingleMessages([]);
-    setSingleFinal(null);
-    try {
-      const result = await singleAgentCreate(intent, apiConfig, (event) => {
-        if (event.type === "start") {
-          setSingleMessages([{
-            agent: "创意专家",
-            agentEmoji: "🧠",
-            agentRole: "全能创意策划",
-            message: "正在思考创意方案...",
-            _round: 1,
-            _agentIndex: 0,
-          }]);
-        }
-      });
-      setSingleMessages([{
-        agent: "创意专家",
-        agentEmoji: "🧠",
-        agentRole: "全能创意策划",
-        message: result,
-        _round: 1,
-        _agentIndex: 0,
-      }]);
-      setSingleFinal({ title: "单Agent方案", concept: "", detail: result, highlights: [] });
-    } catch (e) {
-      setSingleMessages([{
-        agent: "系统",
-        agentEmoji: "⚠️",
-        agentRole: "",
-        message: "出错了: " + e.message,
-        _round: 1,
-        _agentIndex: 0,
-      }]);
-    } finally {
-      setSingleRunning(false);
-    }
   };
 
   // 多Agent流程
@@ -952,7 +898,7 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
               onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
-              🚀 开始脑爆 — 单Agent vs 多Agent 对决
+              🚀 开始脑爆
             </button>
           )}
         </div>
@@ -984,7 +930,7 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
         <span className="text-xs flex-1 truncate" style={{ color: TEXT_DIM }}>
           {intent}
         </span>
-        {(multiRunning || singleRunning) && (
+        {multiRunning && (
           <div className="flex gap-2">
             <button
               onClick={() => { controlRef.current.forceConverge = true; }}
@@ -1012,23 +958,10 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
         )}
       </div>
 
-      {/* 左右对比面板 */}
-      <div className="flex flex-col md:flex-row flex-1 gap-3 p-4" style={{ minHeight: 0 }}>
-        {/* 左：单Agent */}
+      {/* 脑爆面板 */}
+      <div className="flex flex-1 p-4" style={{ minHeight: 0 }}>
         <ChatPanel
-          title="单Agent"
-          icon="🧠"
-          messages={singleMessages}
-          roundMarkers={[]}
-          moderatorResults={[]}
-          finalResult={singleFinal}
-          status="思考中..."
-          isRunning={singleRunning}
-        />
-
-        {/* 右：多Agent */}
-        <ChatPanel
-          title={`多Agent脑爆 (${personas.filter(p => p.name).length}人)`}
+          title={`创意脑爆 (${personas.filter(p => p.name).length}人)`}
           icon="🔥"
           messages={multiMessages}
           roundMarkers={[]}
@@ -1039,71 +972,6 @@ export default function BrainstormScreen({ apiConfig, onBack }) {
         />
       </div>
 
-      {/* 投票栏 */}
-      {stage === "done" && !vote && (
-        <div
-          className="flex items-center justify-center gap-6 py-4"
-          style={{ borderTop: `1px solid ${BORDER}`, background: BG_CARD }}
-        >
-          <span className="text-sm" style={{ color: TEXT_DIM }}>
-            哪个创意更好？
-          </span>
-          <button
-            onClick={() => setVote("single")}
-            className="cursor-pointer px-6 py-2 rounded-lg text-sm font-bold transition-all"
-            style={{
-              background: "rgba(78,205,196,0.1)",
-              border: "2px solid #4ecdc4",
-              color: "#4ecdc4",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(78,205,196,0.2)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(78,205,196,0.1)")}
-          >
-            👈 单Agent更好
-          </button>
-          <button
-            onClick={() => setVote("multi")}
-            className="cursor-pointer px-6 py-2 rounded-lg text-sm font-bold transition-all"
-            style={{
-              background: "rgba(255,215,0,0.1)",
-              border: "2px solid #ffd700",
-              color: "#ffd700",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,215,0,0.2)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,215,0,0.1)")}
-          >
-            多Agent更好 👉
-          </button>
-          <button
-            onClick={() => setVote("tie")}
-            className="cursor-pointer px-4 py-2 rounded-lg text-xs transition-all"
-            style={{
-              background: "transparent",
-              border: `1px solid ${BORDER}`,
-              color: TEXT_DIM,
-            }}
-          >
-            差不多
-          </button>
-        </div>
-      )}
-      {vote && (
-        <div
-          className="flex items-center justify-center py-3"
-          style={{ borderTop: `1px solid ${BORDER}`, background: BG_CARD }}
-        >
-          <span className="text-sm" style={{ color: GOLD }}>
-            ✅ 你投了「{vote === "single" ? "单Agent" : vote === "multi" ? "多Agent" : "差不多"}」—— 感谢反馈！
-          </span>
-          <button
-            onClick={onBack}
-            className="ml-4 text-xs cursor-pointer px-4 py-1 rounded"
-            style={{ border: `1px solid ${BORDER}`, color: TEXT_DIM }}
-          >
-            再来一次
-          </button>
-        </div>
-      )}
     </div>
   );
 }
